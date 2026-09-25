@@ -1,0 +1,39 @@
+{
+  "name": "podotomy-3d",
+  "version": "1.0.0",
+  "description": "Interactive anatomical foot 3D annotator built with Three.js and TypeScript.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "keywords": [
+    "threejs",
+    "typescript",
+    "anatomy",
+    "podiatry",
+    "3d",
+    "annotation"
+  ],
+  "author": {
+    "name": "Daniel Rösch",
+    "email": "daniel.roesch91@gmail.com"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.43.0",
+    "@types/node": "^26.6.2",
+    "@types/three": "^0.160.0",
+    "jsdom": "^24.0.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0",
+    "vitest": "^1.5.0"
+  }
+}

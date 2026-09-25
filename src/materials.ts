@@ -44,9 +44,9 @@ export const defaultMaterial = new THREE.MeshStandardMaterial({
 
 /**
  * Updates the UV repeat scale factor for all bone texture maps
- * @param {number} scaleFactor 
+ * @param scaleFactor Multiplier for texture tiling
  */
-export function updateTextureScale(scaleFactor) {
+export function updateTextureScale(scaleFactor: number): void {
     AppState.textureScale = scaleFactor;
     [boneAlbedoMap, boneNormalMap, boneRoughnessMap, boneAoMap].forEach(tex => {
         if (tex) {
@@ -58,13 +58,14 @@ export function updateTextureScale(scaleFactor) {
 
 /**
  * Generates tri-planar box UV coordinates across all three dominant projection planes (X, Y, Z).
- * Resolves models without pre-baked UVs in ~6ms without stretching.
- * @param {THREE.BufferGeometry} geometry 
- * @param {number} baseScale 
+ * @param geometry Target BufferGeometry
+ * @param baseScale UV scale factor
  */
-export function generateBoxUVs(geometry, baseScale = 0.02) {
+export function generateBoxUVs(geometry: THREE.BufferGeometry, baseScale = 0.02): void {
     const pos = geometry.attributes.position;
     const norm = geometry.attributes.normal;
+    if (!pos) return;
+
     const count = pos.count;
     const uvs = new Float32Array(count * 2);
 
@@ -80,7 +81,7 @@ export function generateBoxUVs(geometry, baseScale = 0.02) {
             nz = Math.abs(norm.getZ(i));
         }
 
-        let u, v;
+        let u: number, v: number;
         if (ny >= nx && ny >= nz) {
             // Dominant normal is Y (top/bottom)
             u = x * baseScale;

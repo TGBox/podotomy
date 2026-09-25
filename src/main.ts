@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { AppState } from './state.js';
 import { scene, camera, renderer, controls } from './scene.js';
 import { boneMaterial, defaultMaterial, generateBoxUVs } from './materials.js';
@@ -11,15 +11,15 @@ import { setupInteractions, selectMarker, updateFloatingTooltipPosition } from '
 
 /**
  * Computes anatomical centroid of the foot body (ignoring upper protruding shin bone)
- * @param {THREE.Object3D} model 
- * @returns {THREE.Vector3}
  */
-function getFootCentroid(model) {
+export function getFootCentroid(model: THREE.Object3D): THREE.Vector3 {
     let sumX = 0, sumY = 0, sumZ = 0;
     let samples = 0;
     model.traverse((child) => {
-        if (child.isMesh && child.geometry) {
-            const pos = child.geometry.attributes.position;
+        const mesh = child as THREE.Mesh;
+        if (mesh.isMesh && mesh.geometry) {
+            const pos = mesh.geometry.attributes.position;
+            if (!pos) return;
             const count = pos.count;
             const step = Math.max(1, Math.floor(count / 25000));
             for (let i = 0; i < count; i += step) {
@@ -37,7 +37,7 @@ function getFootCentroid(model) {
 /**
  * Loads Full_Foot.glb, centers the model, generates UVs, frames camera, and loads markers
  */
-function loadModel() {
+export function loadModel(): void {
     const loader = new GLTFLoader();
     const modelUrl = 'Full_Foot.glb';
     const estimatedTotalBytes = 40605948; // ~38.7 MB
@@ -59,12 +59,14 @@ function loadModel() {
 
             // Generate Tri-Planar Box UVs and apply bone material
             AppState.footModel.traverse((child) => {
-                if (child.isMesh && child.geometry) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    generateBoxUVs(child.geometry, 0.02);
-                    child.material = AppState.useTexture ? boneMaterial : defaultMaterial;
-                    child.material.wireframe = AppState.wireframeEnabled;
+                const mesh = child as THREE.Mesh;
+                if (mesh.isMesh && mesh.geometry) {
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    generateBoxUVs(mesh.geometry, 0.02);
+                    mesh.material = AppState.useTexture ? boneMaterial : defaultMaterial;
+                    const mat = mesh.material as THREE.MeshStandardMaterial;
+                    mat.wireframe = AppState.wireframeEnabled;
                 }
             });
 
@@ -90,31 +92,30 @@ function loadModel() {
 
             // Fade out loading screen
             setTimeout(() => {
-                dom.loadingOverlay.classList.add('fade-out');
+                dom.loadingOverlay?.classList.add('fade-out');
             }, 300);
         },
         (xhr) => {
             const total = xhr.total > 0 ? xhr.total : estimatedTotalBytes;
             const percent = Math.min(Math.round((xhr.loaded / total) * 100), 100);
-            dom.progressBar.style.width = `${percent}%`;
-            dom.progressPercent.textContent = `${percent}%`;
+            if (dom.progressBar) dom.progressBar.style.width = `${percent}%`;
+            if (dom.progressPercent) dom.progressPercent.textContent = `${percent}%`;
             const loadedMb = (xhr.loaded / (1024 * 1024)).toFixed(1);
             const totalMb = (total / (1024 * 1024)).toFixed(1);
-            dom.progressBytes.textContent = `${loadedMb} MB / ${totalMb} MB`;
+            if (dom.progressBytes) dom.progressBytes.textContent = `${loadedMb} MB / ${totalMb} MB`;
         },
         (error) => {
             console.error('Error loading 3D model:', error);
             showToast('Fehler beim Laden von Full_Foot.glb', 'error');
-            dom.progressBytes.textContent = 'Fehler beim Laden!';
+            if (dom.progressBytes) dom.progressBytes.textContent = 'Fehler beim Laden!';
         }
     );
 }
 
 /**
  * Main WebGL rendering loop running at 60 FPS
- * @param {number} time 
  */
-function animate(time) {
+export function animate(time: number): void {
     requestAnimationFrame(animate);
 
     // Camera fly animation tween
@@ -162,7 +163,7 @@ function animate(time) {
         // Target opacities:
         // Occluded (behind foot): ~0.25 (idle dot) or ~0.45 (expanded/hovered)
         // Visible (front of foot): 1.0
-        let targetSpriteOpacity;
+        let targetSpriteOpacity: number;
         if (isOccluded) {
             targetSpriteOpacity = isExpanded ? 0.45 : 0.25;
         } else {
@@ -179,11 +180,13 @@ function animate(time) {
         sprite.position.y += (targetY - sprite.position.y) * lerpFactor;
 
         sprite.material.opacity += (targetSpriteOpacity - sprite.material.opacity) * lerpFactor;
-        if (stemLine) {
-            stemLine.material.opacity += (targetStemOpacity - stemLine.material.opacity) * lerpFactor;
+        if (stemLine && !Array.isArray(stemLine.material)) {
+            const lineMat = stemLine.material as THREE.LineBasicMaterial;
+            lineMat.opacity += (targetStemOpacity - lineMat.opacity) * lerpFactor;
         }
-        if (dotMesh) {
-            dotMesh.material.opacity += (targetDotOpacity - dotMesh.material.opacity) * lerpFactor;
+        if (dotMesh && !Array.isArray(dotMesh.material)) {
+            const dotMat = dotMesh.material as THREE.MeshBasicMaterial;
+            dotMat.opacity += (targetDotOpacity - dotMat.opacity) * lerpFactor;
         }
     });
 
@@ -195,17 +198,19 @@ function animate(time) {
 }
 
 // --- Application Bootstrap ---
-onMarkersChanged(() => {
-    updateSidebarList();
-    updateMarkerCounts();
-});
+if (typeof window !== 'undefined') {
+    onMarkersChanged(() => {
+        updateSidebarList();
+        updateMarkerCounts();
+    });
 
-initUI({
-    selectMarker,
-    syncSceneMarkers,
-    resetCameraView
-});
+    initUI({
+        selectMarker,
+        syncSceneMarkers,
+        resetCameraView
+    });
 
-setupInteractions();
-loadModel();
-animate(0);
+    setupInteractions();
+    loadModel();
+    animate(0);
+}

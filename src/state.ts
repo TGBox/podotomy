@@ -1,10 +1,11 @@
 import * as THREE from 'three';
+import type { AppStateInterface, AnnotationMarker } from './types.js';
 
 /**
  * Global reactive application state
  */
-export const AppState = {
-    mode: 'navigate', // 'navigate' | 'add'
+export const AppState: AppStateInterface = {
+    mode: 'navigate',
     markers: [],
     selectedMarkerId: null,
     hoveredMarkerId: null,
@@ -26,18 +27,15 @@ export const AppState = {
 
 /**
  * Returns the currently selected marker object if any
- * @returns {object|null}
  */
-export function getSelectedMarker() {
+export function getSelectedMarker(): AnnotationMarker | null {
     if (!AppState.selectedMarkerId) return null;
     return AppState.markers.find(m => m.id === AppState.selectedMarkerId) || null;
 }
 
 /**
  * Returns a marker by its unique ID
- * @param {string} id
- * @returns {object|null}
  */
-export function getMarkerById(id) {
+export function getMarkerById(id: string): AnnotationMarker | null {
     return AppState.markers.find(m => m.id === id) || null;
 }

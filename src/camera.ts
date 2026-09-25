@@ -2,17 +2,17 @@ import * as THREE from 'three';
 import { camera, controls } from './scene.js';
 import { AppState } from './state.js';
 
-function easeInOutCubic(t) {
+export function easeInOutCubic(t: number): number {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 /**
  * Smoothly animates the camera to focus on a target 3D position
- * @param {THREE.Vector3} targetPosition 
- * @param {THREE.Vector3|null} normalOffset Optional surface normal offset
- * @param {number} duration Duration in milliseconds
+ * @param targetPosition 
+ * @param normalOffset Optional surface normal offset
+ * @param duration Duration in milliseconds
  */
-export function flyToPosition(targetPosition, normalOffset = null, duration = 800) {
+export function flyToPosition(targetPosition: THREE.Vector3, normalOffset: THREE.Vector3 | null = null, duration = 800): void {
     const startCamPos = camera.position.clone();
     const startControlsTarget = controls.target.clone();
 
@@ -20,7 +20,7 @@ export function flyToPosition(targetPosition, normalOffset = null, duration = 80
     const radius = AppState.modelBoundingSphere ? AppState.modelBoundingSphere.radius : 1.0;
     const viewDistance = radius * 0.65;
 
-    let endCamPos;
+    let endCamPos: THREE.Vector3;
     if (normalOffset) {
         endCamPos = targetPosition.clone().add(normalOffset.clone().normalize().multiplyScalar(viewDistance));
     } else {
@@ -31,7 +31,7 @@ export function flyToPosition(targetPosition, normalOffset = null, duration = 80
     const startTime = performance.now();
 
     AppState.cameraAnimation = {
-        update: (now) => {
+        update: (now: number) => {
             const elapsed = now - startTime;
             const progress = Math.min(elapsed / duration, 1.0);
             const t = easeInOutCubic(progress);
@@ -50,7 +50,7 @@ export function flyToPosition(targetPosition, normalOffset = null, duration = 80
 /**
  * Smoothly returns camera to default anatomical perspective
  */
-export function resetCameraView() {
+export function resetCameraView(): void {
     const startCamPos = camera.position.clone();
     const startControlsTarget = controls.target.clone();
     const endCamPos = AppState.initialCameraPosition.clone();
@@ -58,7 +58,7 @@ export function resetCameraView() {
     const startTime = performance.now();
 
     AppState.cameraAnimation = {
-        update: (now) => {
+        update: (now: number) => {
             const elapsed = now - startTime;
             const progress = Math.min(elapsed / 700, 1.0);
             const t = easeInOutCubic(progress);

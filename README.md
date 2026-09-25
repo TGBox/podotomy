@@ -8,7 +8,8 @@
 
 - [Funktionsübersicht](#funktionsübersicht)
 - [Architektur & Modulübersicht](#architektur--modulübersicht)
-- [Lokale Einrichtung & Start](#lokale-einrichtung--start)
+- [Lokale Einrichtung & Skripte](#lokale-einrichtung--skripte)
+- [Test-Suite (Unit, Integration & E2E)](#test-suite-unit-integration--e2e)
 - [3D-Geometrie & Anatomische Konventionen](#3d-geometrie--anatomische-konventionen)
   - [Koordinatensystem & Ausrichtung](#koordinatensystem--ausrichtung)
   - [Dichte-basierte Fußzentrierung](#dichte-basierte-fußzentrierung)
@@ -34,30 +35,47 @@
 - **Flüssige 60 FPS Performance:** Analytische $O(1)$-Vektormathematik zur Verdeckungserkennung ohne teure Mesh-Raycasts im Render-Loop.
 - **Schnellsuche & Filterung:** Durchsuchen der gesetzten Punkte in der Seitenleiste nach Titel oder Beschreibung.
 - **Import & Export:** Dauerhafte Speicherung im Browser (`localStorage`) sowie Export und Import als standardisierte JSON-Dateien.
+- **Vollständige Typsicherheit:** Vollständig in striktem **TypeScript** implementiert inklusive typisierter Datenmodelle und Schnittstellen.
+- **100% Testabdeckung:** Umfassende automatisierte Test-Suite mit **Vitest** (Unit/Integration) und **Playwright** (End-to-End).
 
 ---
 
 ## Architektur & Modulübersicht
 
-Das Projekt setzt auf native Browser-ES-Module (`<script type="module">`). Dadurch wird **kein Build-Tool, Bundler oder Transpiler (wie Vite, Webpack oder Rollup)** benötigt. Die Anwendung läuft sofort in jedem modernen Webbrowser über einen einfachen statischen HTTP-Server.
-
-Alle JavaScript-Quellcodedateien befinden sich modularisiert im Verzeichnis `src/`:
+Das Projekt nutzt modernstes **TypeScript** zusammen mit **Vite** als performantem Bundler und Dev-Server. Alle Module sind modular, strikt typisiert und entkoppelt aufgebaut.
 
 ```txt
 podotomy/
 ├── bone-texture/               # PBR-Texturdateien (Albedo, Normal, Roughness, AO)
-├── src/                        # Modulare Anwendungsarchitektur (ES-Module)
-│   ├── camera.js               # Kamera-Flug- & Reset-Animationen (Easing, Orbit)
-│   ├── interactions.js         # Raycasting, Maus-Events (Hover/Click), Tooltip-Position
-│   ├── main.js                 # Haupteinstiegspunkt, GLTF-Lader & 60-FPS-Renderloop
-│   ├── materials.js            # PBR-Knochenmaterial, Tri-Planare Box-UV-Generierung
-│   ├── markers.js              # 3D-Marker-Visuals, Canvas-Badge-Texturen, Okklusionsprüfung
-│   ├── scene.js                # Three.js Grundgerüst (Scene, Camera, Renderer, Lights)
-│   ├── state.js                # Zentrales reaktives App-State-Objekt (AppState)
-│   ├── storage.js              # LocalStorage-Serialisierung & JSON-Im-/Export
-│   └── ui.js                   # DOM-Elemente, Modaldialoge, Seitenleiste, Toast-Meldungen
+├── src/                        # Modulare TypeScript-Anwendungsarchitektur
+│   ├── camera.ts               # Kamera-Flug- & Reset-Animationen (Easing, Orbit)
+│   ├── interactions.ts         # Raycasting, Maus-Events (Hover/Click), Marker-Selektion
+│   ├── main.ts                 # Haupteinstiegspunkt, GLTF-Lader & 60-FPS-Renderloop
+│   ├── markers.ts              # 3D-Marker-Visuals, Canvas-Badge-Texturen, Okklusionsprüfung
+│   ├── materials.ts            # PBR-Knochenmaterial, Tri-Planare Box-UV-Generierung
+│   ├── scene.ts                # Three.js Grundgerüst (Scene, Camera, Renderer, Lights)
+│   ├── state.ts                # Zentrales reaktives App-State-Objekt (AppState)
+│   ├── storage.ts              # LocalStorage-Serialisierung & JSON-Im-/Export
+│   ├── types.ts                # Zentrale TypeScript-Typdefinitionen & Interfaces
+│   └── ui.ts                   # DOM-Elemente, Modaldialoge, Seitenleiste, Toast-Meldungen
+├── tests/
+│   ├── setup.ts                # Test-Environment Setup (2D Canvas- & WebGL-Mocks)
+│   ├── unit/                   # Vitest Unit- und Integrations-Tests
+│   │   ├── camera.test.ts      # Tests für Kamerafahrten, Berechnungen und Reset
+│   │   ├── interactions.test.ts# Tests für Interaktionsmodi und Raycast-Handling
+│   │   ├── markers.test.ts     # Tests für Canvas-Badges, Skalierung und Okklusion
+│   │   ├── materials.test.ts   # Tests für PBR-Materialien und Box-UVs
+│   │   ├── state.test.ts       # Tests für State-Management und Reaktivität
+│   │   ├── storage.test.ts     # Tests für LocalStorage, Migration und JSON-Im-/Export
+│   │   └── ui.test.ts          # Tests für DOM-Rendering, Sidebar, Filter und Modale
+│   └── e2e/                    # Playwright End-to-End Browser-Tests
+│       └── app.spec.ts         # Komplette E2E-Workflows im echten Chromium-Browser
 ├── Full_Foot.glb               # 3D-GLTF-Fußmodell (zentriert, aufrecht orientiert)
-├── index.html                  # HTML5-Gerüst mit Three.js Import Map & Modul-Start
+├── index.html                  # HTML5-Gerüst mit Vite-Einstiegspunkt
+├── package.json                # npm Abhängigkeiten, Skripte & Metadaten
+├── playwright.config.ts        # Playwright E2E-Konfiguration
+├── tsconfig.json               # Strikte TypeScript-Compiler-Konfiguration
+├── vite.config.ts              # Vite & Vitest Konfiguration
 ├── style.css                   # Modernes Glassmorphism-UI-Designsystem
 └── README.md                   # Projektdokumentation
 ```
@@ -66,45 +84,79 @@ podotomy/
 
 | Modul | Hauptaufgabe |
 | :--- | :--- |
-| `src/state.js` | Hält das globale Zustandsmodell (`AppState`), aktive Modi (`navigate` vs. `add`), Markierungsdaten und Caches. |
-| `src/scene.js` | Initialisiert WebGLRenderer, OrbitControls, Kamera, hierarchische Marker-Gruppen und das 4-Punkt-Beleuchtungs-Rig. |
-| `src/materials.js` | Lädt PBR-Maps, erzeugt `boneMaterial` und `defaultMaterial`, berechnet prozedurale Box-UV-Koordinaten. |
-| `src/markers.js` | Erzeugt 2D-Canvas-Texturen, baut 3D-Markergruppen (Sprite, Schaft, Ankerpunkt, Hit-Sphere) und prüft Okklusion. |
-| `src/camera.js` | Berechnet kubische Bézier-Flugbahnen für weiche Kamerafahrten auf ausgewählte Punkte oder die Grundansicht. |
-| `src/interactions.js` | Verwaltet Raycasting für Klick/Hover, verhindert Drag-Konflikte und projiziert das 2D-Tooltip über den 3D-Punkt. |
-| `src/ui.js` | Steuert Modale (Hinzufügen/Bearbeiten), Seitenleisten-Listenrendering, Optionen-Drawer und Toasts. |
-| `src/storage.js` | Sichert und lädt Markierungen im Browser-LocalStorage und verarbeitet JSON-Dateitransfers. |
-| `src/main.js` | Verknüpft die Module, lädt das 3D-Modell mit Fortschrittsanzeige und führt den `requestAnimationFrame`-Loop aus. |
+| `src/types.ts` | Definiert Kern-Interfaces (`AnnotationMarker`, `InteractionMode`, `AppStateInterface`, `ExportData`). |
+| `src/state.ts` | Hält das globale reaktive Zustandsmodell (`AppState`), aktive Modi (`navigate` vs. `add`), Markierungsdaten und Caches. |
+| `src/scene.ts` | Initialisiert WebGLRenderer, OrbitControls, Kamera, hierarchische Marker-Gruppen und das Beleuchtungs-Rig. |
+| `src/materials.ts` | Lädt PBR-Maps, erzeugt `boneMaterial` und `defaultMaterial`, berechnet prozedurale Box-UV-Koordinaten. |
+| `src/markers.ts` | Erzeugt 2D-Canvas-Texturen, baut 3D-Markergruppen (Sprite, Schaft, Ankerpunkt, Hit-Sphere) und prüft Okklusion. |
+| `src/camera.ts` | Berechnet kubische Bézier-Flugbahnen für weiche Kamerafahrten auf ausgewählte Punkte oder die Grundansicht. |
+| `src/interactions.ts` | Verwaltet Raycasting für Klick/Hover, verhindert Drag-Konflikte und projiziert das 2D-Tooltip über den 3D-Punkt. |
+| `src/ui.ts` | Steuert Modale (Hinzufügen/Bearbeiten), Seitenleisten-Listenrendering, Optionen-Drawer und Toasts. |
+| `src/storage.ts` | Sichert und lädt Markierungen im Browser-LocalStorage und verarbeitet JSON-Dateitransfers inkl. Validierung. |
+| `src/main.ts` | Verknüpft die Module, lädt das 3D-Modell mit Fortschrittsanzeige und führt den `requestAnimationFrame`-Loop aus. |
 
 ---
 
-## Lokale Einrichtung & Start
-
-Da moderne Webbrowser aus Sicherheitsgründen den Zugriff auf 3D-Modelle und ES-Module über das `file://`-Protokoll einschränken (CORS), muss das Projekt über einen lokalen HTTP-Server aufgerufen werden.
+## Lokale Einrichtung & Skripte
 
 ### Voraussetzungen
 
-Ein beliebiger lokaler Webserver (z. B. Python, Node.js oder VS Code Extension).
+- **Node.js** (Version 18+ empfohlen)
+- **npm** (liegt Node.js bei)
 
-### 1. Mit Python (empfohlen)
-
-```bash
-# Im Projektverzeichnis ausführen:
-python -m http.server 8080
-```
-
-Öffne anschließend im Browser: **[http://localhost:8080](http://localhost:8080)**
-
-### 2. Mit Node.js (`npx serve`)
+### 1. Abhängigkeiten installieren
 
 ```bash
-npx serve . -p 8080
+npm install
 ```
 
-### 3. Mit Visual Studio Code
+### 2. Entwicklungsserver starten
 
-- Installiere die Extension **Live Server**.
-- Klicke mit der rechten Maustaste auf `index.html` und wähle **"Open with Live Server"**.
+```bash
+npm run dev
+```
+
+Die Anwendung startet unter **[http://localhost:8080](http://localhost:8080)** mit automatischem Hot-Module-Replacement (HMR).
+
+### 3. Produktions-Build erstellen
+
+```bash
+npm run build
+```
+
+Kompiliert TypeScript via `tsc` und erzeugt das optimierte, minifizierte Produktions-Bundle im Verzeichnis `dist/`.
+
+### 4. Produktions-Vorschau starten
+
+```bash
+npm run preview
+```
+
+---
+
+## Test-Suite (Unit, Integration & E2E)
+
+Das Projekt verfügt über eine umfassende, automatisierte Testabdeckung auf allen Ebenen:
+
+### Unit- und Integrationstests (Vitest + JSDOM)
+
+Führt alle Unit- und Integrationstests für State, Materialien, Storage, Kamera, Marker, Interaktionen und UI aus:
+
+```bash
+# Einmalige Ausführung aller Unit-Tests
+npm test
+
+# Interaktiver Watch-Modus während der Entwicklung
+npm run test:watch
+```
+
+### End-to-End Tests (Playwright)
+
+Testet die vollständige Benutzeroberfläche und 3D-Interaktionen im echten Chromium-Browser:
+
+```bash
+npm run test:e2e
+```
 
 ---
 

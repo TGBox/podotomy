@@ -1,9 +1,10 @@
 import { AppState } from './state.js';
+import type { AnnotationMarker, ExportData } from './types.js';
 
 /**
  * Persists current markers to browser LocalStorage
  */
-export function saveMarkersToLocalStorage() {
+export function saveMarkersToLocalStorage(): void {
     try {
         const cleanMarkers = AppState.markers.map(({ id, number, title, description, position, normal, createdAt }) => ({
             id, number, title, description, position, normal, createdAt
@@ -17,7 +18,7 @@ export function saveMarkersToLocalStorage() {
 /**
  * Loads persisted markers from LocalStorage (with legacy v1 schema migration)
  */
-export function loadMarkersFromLocalStorage() {
+export function loadMarkersFromLocalStorage(): void {
     try {
         let raw = localStorage.getItem('podotomy_foot_annotations_v2');
         if (raw) {
@@ -28,7 +29,7 @@ export function loadMarkersFromLocalStorage() {
         // Migrate from v1 if present
         raw = localStorage.getItem('podotomy_foot_annotations_v1');
         if (raw) {
-            const v1Markers = JSON.parse(raw);
+            const v1Markers: AnnotationMarker[] = JSON.parse(raw);
             v1Markers.forEach(m => {
                 if (m.position) {
                     if (m.position.x < -35 && m.position.y < -35) {
@@ -66,12 +67,12 @@ export function loadMarkersFromLocalStorage() {
 /**
  * Generates and downloads formatted JSON file containing all annotations
  */
-export function exportMarkersJSON() {
+export function exportMarkersJSON(): boolean {
     if (AppState.markers.length === 0) {
         return false;
     }
 
-    const cleanData = {
+    const cleanData: ExportData = {
         model: 'Full_Foot.glb',
         exportedAt: new Date().toISOString(),
         markersCount: AppState.markers.length,
@@ -94,18 +95,23 @@ export function exportMarkersJSON() {
 
 /**
  * Parses and validates an uploaded JSON annotation file
- * @param {File} file 
- * @param {Function} onSuccess 
- * @param {Function} onError 
+ * @param file 
+ * @param onSuccess 
+ * @param onError 
  */
-export function importMarkersJSON(file, onSuccess, onError) {
+export function importMarkersJSON(
+    file: File,
+    onSuccess: (markers: AnnotationMarker[]) => void,
+    onError: (err: Error) => void
+): void {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = (event: ProgressEvent<FileReader>) => {
         try {
-            const data = JSON.parse(event.target.result);
-            const importedMarkers = Array.isArray(data) ? data : data.annotations;
+            const rawContent = event.target?.result as string;
+            const data = JSON.parse(rawContent);
+            const importedMarkers: AnnotationMarker[] = Array.isArray(data) ? data : data.annotations;
 
             if (!Array.isArray(importedMarkers)) {
                 throw new Error('Ungültiges Format: Keine Markierungsliste gefunden.');
@@ -121,7 +127,7 @@ export function importMarkersJSON(file, onSuccess, onError) {
             onSuccess(validMarkers);
         } catch (err) {
             console.error('Import error:', err);
-            onError(err);
+            onError(err instanceof Error ? err : new Error(String(err)));
         }
     };
     reader.readAsText(file);

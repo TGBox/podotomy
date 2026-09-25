@@ -2,21 +2,19 @@ import * as THREE from 'three';
 import { camera, markersGroup } from './scene.js';
 import { AppState } from './state.js';
 import { saveMarkersToLocalStorage } from './storage.js';
+import type { AnnotationMarker } from './types.js';
 
 // --- Marker Canvas Generators ---
 
 /**
  * Creates dynamic 2D canvas texture for full numbered badge
- * @param {number} number 
- * @param {boolean} isActive 
- * @param {boolean} isHovered 
- * @returns {HTMLCanvasElement}
  */
-export function createBadgeCanvas(number, isActive = false, isHovered = false) {
+export function createBadgeCanvas(number: number, isActive = false, isHovered = false): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 256;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
 
     const centerX = 128;
     const centerY = 128;
@@ -78,15 +76,13 @@ export function createBadgeCanvas(number, isActive = false, isHovered = false) {
 
 /**
  * Creates dynamic 2D canvas texture for small glowing idle dot
- * @param {boolean} isActive 
- * @param {boolean} isHovered 
- * @returns {HTMLCanvasElement}
  */
-export function createDotCanvas(isActive = false, isHovered = false) {
+export function createDotCanvas(isActive = false, isHovered = false): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
     canvas.width = 128;
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
 
     const centerX = 64;
     const centerY = 64;
@@ -124,10 +120,8 @@ export function createDotCanvas(isActive = false, isHovered = false) {
 
 /**
  * Builds 3D visual hierarchy for a single marker
- * @param {object} markerData 
- * @returns {{group: THREE.Group, sprite: THREE.Sprite}}
  */
-export function createMarkerVisual(markerData) {
+export function createMarkerVisual(markerData: AnnotationMarker): { group: THREE.Group; sprite: THREE.Sprite } {
     const group = new THREE.Group();
     group.userData = { markerId: markerData.id, number: markerData.number };
 
@@ -228,11 +222,8 @@ export function createMarkerVisual(markerData) {
 
 /**
  * Updates textures for a marker when active/selected status changes
- * @param {string} markerId 
- * @param {boolean} isActive 
- * @param {boolean} isHovered 
  */
-export function updateMarkerBadgeTexture(markerId, isActive = false, isHovered = false) {
+export function updateMarkerBadgeTexture(markerId: string, isActive = false, isHovered = false): void {
     const marker = AppState.markers.find(m => m.id === markerId);
     if (!marker) return;
 
@@ -259,7 +250,7 @@ const _lastCamRot = new THREE.Quaternion();
 /**
  * Real-time analytical occlusion test based on surface normal vectors
  */
-export function updateMarkerOcclusion() {
+export function updateMarkerOcclusion(): void {
     if (!AppState.footModel || AppState.markers.length === 0) return;
 
     // Fast return if camera has not moved
@@ -291,7 +282,7 @@ export function updateMarkerOcclusion() {
     if (AppState.selectedMarkerId) {
         const activeMarker = AppState.markers.find(m => m.id === AppState.selectedMarkerId);
         if (activeMarker) {
-            const floatingTooltip = document.getElementById('floating-tooltip');
+            const floatingTooltip = typeof document !== 'undefined' ? document.getElementById('floating-tooltip') : null;
             if (floatingTooltip) {
                 if (activeMarker.isOccluded) {
                     floatingTooltip.classList.add('occluded');
@@ -304,13 +295,12 @@ export function updateMarkerOcclusion() {
 }
 
 // Event listener callback registry for scene sync events
-let onMarkersChangedCallbacks = [];
+const onMarkersChangedCallbacks: Array<() => void> = [];
 
 /**
  * Registers a callback invoked whenever markers are synced or updated
- * @param {Function} cb 
  */
-export function onMarkersChanged(cb) {
+export function onMarkersChanged(cb: () => void): void {
     if (typeof cb === 'function') {
         onMarkersChangedCallbacks.push(cb);
     }
@@ -319,15 +309,17 @@ export function onMarkersChanged(cb) {
 /**
  * Rebuilds all 3D markers from AppState.markers
  */
-export function syncSceneMarkers() {
+export function syncSceneMarkers(): void {
     // Clear existing children
     while (markersGroup.children.length > 0) {
         const child = markersGroup.children[0];
         child.traverse((obj) => {
-            if (obj.geometry) obj.geometry.dispose();
-            if (obj.material) {
-                if (obj.material.map) obj.material.map.dispose();
-                obj.material.dispose();
+            const mesh = obj as THREE.Mesh;
+            if (mesh.geometry) mesh.geometry.dispose();
+            if (mesh.material) {
+                const mat = mesh.material as THREE.Material & { map?: THREE.Texture };
+                if (mat.map) mat.map.dispose();
+                mat.dispose();
             }
         });
         markersGroup.remove(child);
@@ -345,7 +337,8 @@ export function syncSceneMarkers() {
     AppState.interactiveMarkerObjects = [];
     markersGroup.children.forEach(group => {
         group.children.forEach(child => {
-            if (child.isSprite || (child.isMesh && child.userData && (child.userData.isMarkerAnchor || child.userData.isMarkerHitTarget))) {
+            const mesh = child as THREE.Mesh;
+            if (child instanceof THREE.Sprite || (mesh.isMesh && mesh.userData && (mesh.userData.isMarkerAnchor || mesh.userData.isMarkerHitTarget))) {
                 AppState.interactiveMarkerObjects.push(child);
             }
         });
