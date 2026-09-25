@@ -9,15 +9,17 @@ const AppState = {
     selectedMarkerId: null,
     footModel: null,
     modelBoundingSphere: null,
-    initialCameraPosition: new THREE.Vector3(0, 0.5, 1.5),
+    initialCameraPosition: new THREE.Vector3(140, 100, 200),
     initialCameraTarget: new THREE.Vector3(0, 0, 0),
     isDragging: false,
     cameraAnimation: null,
     pendingHit: null,
     wireframeEnabled: false,
+    useTexture: true,
+    textureScale: 1.0,
     modelScaleFactor: 1.0,
     searchQuery: '',
-    storageKey: 'podotomy_foot_annotations_v1'
+    storageKey: 'podotomy_foot_annotations_v2'
 };
 
 // --- DOM Elements ---
@@ -66,6 +68,9 @@ const editDescInput = document.getElementById('edit-desc');
 const cancelEditBtn = document.getElementById('cancel-edit-btn');
 
 // Options controls
+const textureToggle = document.getElementById('texture-toggle');
+const textureScaleSlider = document.getElementById('texture-scale-slider');
+const texScaleValSpan = document.getElementById('tex-scale-val');
 const wireframeToggle = document.getElementById('wireframe-toggle');
 const ambientLightSlider = document.getElementById('ambient-light-slider');
 const ambientValSpan = document.getElementById('ambient-val');
@@ -85,6 +90,7 @@ scene.background = new THREE.Color(0x0b0f17);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
 camera.position.copy(AppState.initialCameraPosition);
+camera.up.set(0, 1, 0); // Y is UP
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -113,6 +119,99 @@ scene.add(fillLight);
 
 const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e293b, 0.5);
 scene.add(hemiLight);
+
+// --- PBR Bone Material Setup ---
+const textureLoader = new THREE.TextureLoader();
+
+const boneAlbedoMap = textureLoader.load('bone-texture/bone_albedo.png');
+boneAlbedoMap.colorSpace = THREE.SRGBColorSpace;
+boneAlbedoMap.wrapS = THREE.RepeatWrapping;
+boneAlbedoMap.wrapT = THREE.RepeatWrapping;
+
+const boneNormalMap = textureLoader.load('bone-texture/bone_normal-ogl.png');
+boneNormalMap.wrapS = THREE.RepeatWrapping;
+boneNormalMap.wrapT = THREE.RepeatWrapping;
+
+const boneRoughnessMap = textureLoader.load('bone-texture/bone_roughness.png');
+boneRoughnessMap.wrapS = THREE.RepeatWrapping;
+boneRoughnessMap.wrapT = THREE.RepeatWrapping;
+
+const boneAoMap = textureLoader.load('bone-texture/bone_ao.png');
+boneAoMap.wrapS = THREE.RepeatWrapping;
+boneAoMap.wrapT = THREE.RepeatWrapping;
+
+const boneMaterial = new THREE.MeshStandardMaterial({
+    map: boneAlbedoMap,
+    normalMap: boneNormalMap,
+    normalScale: new THREE.Vector2(0.9, 0.9),
+    roughnessMap: boneRoughnessMap,
+    roughness: 0.75,
+    metalness: 0.03,
+    aoMap: boneAoMap,
+    aoMapIntensity: 0.95,
+    wireframe: false
+});
+
+const defaultMaterial = new THREE.MeshStandardMaterial({
+    color: 0xedf2f7,
+    roughness: 0.6,
+    metalness: 0.1,
+    wireframe: false
+});
+
+function updateTextureScale(scaleFactor) {
+    AppState.textureScale = scaleFactor;
+    [boneAlbedoMap, boneNormalMap, boneRoughnessMap, boneAoMap].forEach(tex => {
+        if (tex) {
+            tex.repeat.set(scaleFactor, scaleFactor);
+            tex.needsUpdate = true;
+        }
+    });
+}
+
+// Generate Box UVs across all 3 projection planes
+function generateBoxUVs(geometry, baseScale = 0.02) {
+    const pos = geometry.attributes.position;
+    const norm = geometry.attributes.normal;
+    const count = pos.count;
+    const uvs = new Float32Array(count * 2);
+
+    for (let i = 0; i < count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
+        const z = pos.getZ(i);
+
+        let nx = 0, ny = 1, nz = 0;
+        if (norm) {
+            nx = Math.abs(norm.getX(i));
+            ny = Math.abs(norm.getY(i));
+            nz = Math.abs(norm.getZ(i));
+        }
+
+        let u, v;
+        if (ny >= nx && ny >= nz) {
+            // Dominant normal is Y (top/bottom)
+            u = x * baseScale;
+            v = z * baseScale;
+        } else if (nx >= ny && nx >= nz) {
+            // Dominant normal is X (sides)
+            u = z * baseScale;
+            v = y * baseScale;
+        } else {
+            // Dominant normal is Z (front/back)
+            u = x * baseScale;
+            v = y * baseScale;
+        }
+
+        uvs[i * 2] = u;
+        uvs[i * 2 + 1] = v;
+    }
+
+    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    geometry.setAttribute('uv2', new THREE.BufferAttribute(uvs, 2)); // For aoMap
+    geometry.attributes.uv.needsUpdate = true;
+    geometry.attributes.uv2.needsUpdate = true;
+}
 
 // Group to hold 3D markers
 const markersGroup = new THREE.Group();
@@ -284,6 +383,27 @@ function updateMarkerBadgeTexture(markerId, isActive = false, isHovered = false)
     sprite.material.map.needsUpdate = true;
 }
 
+// Compute anatomical centroid of the foot body (ignoring upper protruding shin)
+function getFootCentroid(model) {
+    let sumX = 0, sumY = 0, sumZ = 0;
+    let samples = 0;
+    model.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+            const pos = child.geometry.attributes.position;
+            const count = pos.count;
+            const step = Math.max(1, Math.floor(count / 25000));
+            for (let i = 0; i < count; i += step) {
+                sumX += pos.getX(i);
+                sumY += pos.getY(i);
+                sumZ += pos.getZ(i);
+                samples++;
+            }
+        }
+    });
+    if (samples === 0) return new THREE.Vector3(0, 0, 0);
+    return new THREE.Vector3(sumX / samples, sumY / samples, sumZ / samples);
+}
+
 // --- 3. Model Loading & Auto-framing ---
 function loadModel() {
     const loader = new GLTFLoader();
@@ -295,41 +415,39 @@ function loadModel() {
         (gltf) => {
             AppState.footModel = gltf.scene;
 
-            // Ensure world matrices are computed
+            // Compute foot centroid based on vertex density (places pivot inside the foot body)
+            const footCenter = getFootCentroid(AppState.footModel);
+            AppState.footModel.position.sub(footCenter);
             AppState.footModel.updateMatrixWorld(true);
 
-            // Compute exact Bounding Box & Center
+            // Compute Bounding Sphere after centering for optimal camera framing
             const box = new THREE.Box3().setFromObject(AppState.footModel);
-            const center = box.getCenter(new THREE.Vector3());
             const sphere = box.getBoundingSphere(new THREE.Sphere());
             AppState.modelBoundingSphere = sphere;
 
-            // Ensure model is centered at origin (0, 0, 0)
-            AppState.footModel.position.sub(center);
-            AppState.footModel.updateMatrixWorld(true);
-
-            // Enhance materials
+            // Generate Box UVs and apply bone material
             AppState.footModel.traverse((child) => {
-                if (child.isMesh) {
+                if (child.isMesh && child.geometry) {
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    if (child.material) {
-                        child.userData.originalMaterial = child.material;
-                        child.material.roughness = 0.55;
-                        child.material.metalness = 0.1;
-                    }
+                    // Generate Tri-Planar Box UVs
+                    generateBoxUVs(child.geometry, 0.02);
+                    child.material = AppState.useTexture ? boneMaterial : defaultMaterial;
+                    child.material.wireframe = AppState.wireframeEnabled;
                 }
             });
 
             scene.add(AppState.footModel);
 
-            // Optimal Camera Framing based on Bounding Sphere
+            // Optimal Camera Framing based on centered foot
             const radius = sphere.radius;
-            const dist = radius * 2.2;
-            AppState.initialCameraPosition.set(dist * 0.7, dist * 0.45, dist * 0.85);
+            const dist = radius * 2.0;
+            // Upright foot: Y is UP, Z is length, X is width
+            AppState.initialCameraPosition.set(dist * 0.65, dist * 0.45, dist * 0.85);
             AppState.initialCameraTarget.set(0, 0, 0);
 
             camera.position.copy(AppState.initialCameraPosition);
+            camera.up.set(0, 1, 0);
             controls.target.copy(AppState.initialCameraTarget);
             controls.maxDistance = radius * 6;
             controls.minDistance = radius * 0.2;
@@ -439,12 +557,18 @@ function selectMarker(markerId, smoothFly = true) {
 
     if (!markerId) {
         floatingTooltip.classList.remove('visible');
+        floatingTooltip.style.display = 'none';
         updateSidebarCardHighlight(null);
         return;
     }
 
     const marker = AppState.markers.find(m => m.id === markerId);
-    if (!marker) return;
+    if (!marker) {
+        floatingTooltip.classList.remove('visible');
+        floatingTooltip.style.display = 'none';
+        updateSidebarCardHighlight(null);
+        return;
+    }
 
     updateMarkerBadgeTexture(markerId, true);
     updateSidebarCardHighlight(markerId);
@@ -453,6 +577,7 @@ function selectMarker(markerId, smoothFly = true) {
     tooltipBadge.textContent = String(marker.number);
     tooltipTitle.textContent = marker.title;
     tooltipDesc.textContent = marker.description || 'Keine Notiz vorhanden.';
+    floatingTooltip.style.display = 'block';
     floatingTooltip.classList.add('visible');
 
     // Fly camera if requested
@@ -464,11 +589,15 @@ function selectMarker(markerId, smoothFly = true) {
 }
 
 function updateFloatingTooltipPosition() {
-    if (!AppState.selectedMarkerId || !floatingTooltip.classList.contains('visible')) return;
+    if (!AppState.selectedMarkerId || !floatingTooltip.classList.contains('visible')) {
+        floatingTooltip.style.display = 'none';
+        return;
+    }
 
     const marker = AppState.markers.find(m => m.id === AppState.selectedMarkerId);
     if (!marker || !marker.threeGroup) {
         floatingTooltip.classList.remove('visible');
+        floatingTooltip.style.display = 'none';
         return;
     }
 
@@ -817,18 +946,34 @@ searchInput.addEventListener('input', (e) => {
 });
 
 // --- 9. Floating Tooltip Button Bindings ---
-tooltipCloseBtn.addEventListener('click', () => selectMarker(null));
+tooltipCloseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    selectMarker(null);
+});
 
-tooltipFocusBtn.addEventListener('click', () => {
+tooltipFocusBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     if (AppState.selectedMarkerId) selectMarker(AppState.selectedMarkerId, true);
 });
 
-tooltipEditBtn.addEventListener('click', () => {
+tooltipEditBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     if (AppState.selectedMarkerId) openEditModal(AppState.selectedMarkerId);
 });
 
-tooltipDeleteBtn.addEventListener('click', () => {
+tooltipDeleteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     if (AppState.selectedMarkerId) deleteMarker(AppState.selectedMarkerId);
+});
+
+// Escape key closes open tooltip or deselects
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (AppState.selectedMarkerId) {
+            selectMarker(null);
+        }
+    }
 });
 
 // --- 10. Mode Switching ---
@@ -853,8 +998,28 @@ modeNavBtn.addEventListener('click', () => setMode('navigate'));
 modeAddBtn.addEventListener('click', () => setMode('add'));
 
 // --- 11. Display & Render Options ---
+textureToggle.addEventListener('change', (e) => {
+    AppState.useTexture = e.target.checked;
+    if (AppState.footModel) {
+        AppState.footModel.traverse((child) => {
+            if (child.isMesh) {
+                child.material = AppState.useTexture ? boneMaterial : defaultMaterial;
+                child.material.wireframe = AppState.wireframeEnabled;
+            }
+        });
+    }
+});
+
+textureScaleSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    texScaleValSpan.textContent = `${val.toFixed(1)}x`;
+    updateTextureScale(val);
+});
+
 wireframeToggle.addEventListener('change', (e) => {
     AppState.wireframeEnabled = e.target.checked;
+    boneMaterial.wireframe = AppState.wireframeEnabled;
+    defaultMaterial.wireframe = AppState.wireframeEnabled;
     if (AppState.footModel) {
         AppState.footModel.traverse((child) => {
             if (child.isMesh && child.material) {
@@ -923,17 +1088,43 @@ function saveMarkersToLocalStorage() {
 
 function loadMarkersFromLocalStorage() {
     try {
-        const raw = localStorage.getItem(AppState.storageKey);
+        let raw = localStorage.getItem('podotomy_foot_annotations_v2');
         if (raw) {
             AppState.markers = JSON.parse(raw);
-            // Migrate legacy markers if saved with old uncentered model offsets
-            AppState.markers.forEach(m => {
-                if (m.position && m.position.x < -35 && m.position.y < -35) {
-                    m.position.x += 106.843;
-                    m.position.y += 130.002;
-                    m.position.z -= 5.246;
+            return;
+        }
+
+        // Migrate from v1 if present
+        raw = localStorage.getItem('podotomy_foot_annotations_v1');
+        if (raw) {
+            const v1Markers = JSON.parse(raw);
+            v1Markers.forEach(m => {
+                if (m.position) {
+                    if (m.position.x < -35 && m.position.y < -35) {
+                        m.position.x += 106.843;
+                        m.position.y += 130.002;
+                        m.position.z -= 5.246;
+                    }
+                    // Rotate -90 around X: x' = x, y' = z, z' = -y
+                    const ox = m.position.x;
+                    const oy = m.position.y;
+                    const oz = m.position.z;
+                    m.position.x = ox;
+                    m.position.y = oz;
+                    m.position.z = -oy;
+
+                    if (m.normal) {
+                        const nx = m.normal.x || 0;
+                        const ny = m.normal.y || 1;
+                        const nz = m.normal.z || 0;
+                        m.normal.x = nx;
+                        m.normal.y = nz;
+                        m.normal.z = -ny;
+                    }
                 }
             });
+            AppState.markers = v1Markers;
+            saveMarkersToLocalStorage();
         }
     } catch (err) {
         console.warn('LocalStorage load failed:', err);
