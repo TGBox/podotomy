@@ -295,14 +295,18 @@ function loadModel() {
         (gltf) => {
             AppState.footModel = gltf.scene;
 
-            // Compute Bounding Box & Center
+            // Ensure world matrices are computed
+            AppState.footModel.updateMatrixWorld(true);
+
+            // Compute exact Bounding Box & Center
             const box = new THREE.Box3().setFromObject(AppState.footModel);
             const center = box.getCenter(new THREE.Vector3());
             const sphere = box.getBoundingSphere(new THREE.Sphere());
             AppState.modelBoundingSphere = sphere;
 
-            // Recenter model to origin
+            // Ensure model is centered at origin (0, 0, 0)
             AppState.footModel.position.sub(center);
+            AppState.footModel.updateMatrixWorld(true);
 
             // Enhance materials
             AppState.footModel.traverse((child) => {
@@ -398,8 +402,6 @@ function flyToPosition(targetPosition, normalOffset = null, duration = 800) {
 }
 
 function resetCameraView() {
-    flyToPosition(AppState.initialCameraTarget, null, 700);
-    // Smoothly fly back to initial pos
     const startCamPos = camera.position.clone();
     const startControlsTarget = controls.target.clone();
     const endCamPos = AppState.initialCameraPosition.clone();
@@ -579,6 +581,33 @@ window.addEventListener('pointerup', (e) => {
         } else {
             // Clicked in empty space -> deselect
             selectMarker(null);
+        }
+    }
+});
+
+// Double click in Navigate mode: Center rotation pivot smoothly on clicked point
+window.addEventListener('dblclick', (e) => {
+    if (AppState.mode !== 'navigate') return;
+    if (e.target.closest('.top-nav') ||
+        e.target.closest('.sidebar') ||
+        e.target.closest('.options-drawer') ||
+        e.target.closest('#floating-tooltip') ||
+        e.target.closest('dialog') ||
+        e.target.closest('.toast-container')) {
+        return;
+    }
+
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    if (AppState.footModel) {
+        const hits = raycaster.intersectObject(AppState.footModel, true);
+        if (hits.length > 0) {
+            flyToPosition(hits[0].point, hits[0].face ? hits[0].face.normal : null, 600);
+            showToast('Drehpunkt auf markierte Stelle zentriert', 'info');
+        } else {
+            resetCameraView();
         }
     }
 });
@@ -897,6 +926,14 @@ function loadMarkersFromLocalStorage() {
         const raw = localStorage.getItem(AppState.storageKey);
         if (raw) {
             AppState.markers = JSON.parse(raw);
+            // Migrate legacy markers if saved with old uncentered model offsets
+            AppState.markers.forEach(m => {
+                if (m.position && m.position.x < -35 && m.position.y < -35) {
+                    m.position.x += 106.843;
+                    m.position.y += 130.002;
+                    m.position.z -= 5.246;
+                }
+            });
         }
     } catch (err) {
         console.warn('LocalStorage load failed:', err);
