@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podotomy 3D - Anatomischer Fuß-Annotator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+    </script>
+</head>
+
+<body>
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+        <!-- Brand / Title -->
+        <div class="brand-badge">
+            <div class="brand-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+            </div>
+            <div class="brand-info">
+                <h1>Podotomy 3D</h1>
+                <p>Fuß-Anatomie Annotator</p>
+            </div>
+        </div>
+
+        <!-- Mode Selector Toolbar -->
+        <nav class="mode-toolbar" aria-label="Interaktionsmodus">
+            <button id="mode-nav-btn" class="mode-btn active" title="Navigieren, Drehen und Punkte anklicken">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                Navigieren
+            </button>
+            <button id="mode-add-btn" class="mode-btn" title="Klicke auf das 3D-Modell, um eine neue Markierung zu setzen">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Punkt hinzufügen
+            </button>
+        </nav>
+
+        <!-- Right Quick Actions -->
+        <div class="nav-actions">
+            <button id="reset-view-btn" class="icon-btn" title="Kameraansicht zurücksetzen">
+                <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            </button>
+            <button id="toggle-options-btn" class="icon-btn" title="Darstellungs-Optionen">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+            <button id="toggle-sidebar-btn" class="icon-btn active" title="Markierungen-Liste anzeigen">
+                <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                <span id="marker-count-badge" class="badge-count">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Active Mode Helper Banner -->
+    <div id="mode-banner" class="mode-banner hidden">
+        <span class="pulse-dot"></span>
+        <span>Klicke auf das Fußmodell, um eine Beschriftung zu platzieren</span>
+    </div>
+
+    <!-- Render & Display Options Panel -->
+    <aside id="options-drawer" class="options-drawer hidden" aria-label="Darstellungsoptionen">
+        <div class="options-header">
+            <h3>Darstellung & Licht</h3>
+            <button id="close-options-btn" class="tooltip-close" aria-label="Schließen">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="option-row">
+            <span class="option-label">Drahtgitter (Wireframe)</span>
+            <label class="switch">
+                <input type="checkbox" id="wireframe-toggle">
+                <span class="slider-toggle"></span>
+            </label>
+        </div>
+
+        <div class="range-group">
+            <div class="range-label-row">
+                <span>Umgebungslicht (Ambient)</span>
+                <span id="ambient-val">1.2</span>
+            </div>
+            <input type="range" id="ambient-light-slider" class="range-slider" min="0.2" max="3.0" step="0.1" value="1.2">
+        </div>
+
+        <div class="range-group">
+            <div class="range-label-row">
+                <span>Gerichtetes Licht (Direct)</span>
+                <span id="dir-val">1.6</span>
+            </div>
+            <input type="range" id="dir-light-slider" class="range-slider" min="0.2" max="3.5" step="0.1" value="1.6">
+        </div>
+
+        <div class="range-group">
+            <div class="range-label-row">
+                <span>Hintergrundfarbe</span>
+            </div>
+            <div class="theme-picker">
+                <div class="theme-chip active" data-color="#0b0f17" style="background: #0b0f17;" title="Tiefschwarz"></div>
+                <div class="theme-chip" data-color="#141c2c" style="background: #141c2c;" title="Medizinisches Dunkelblau"></div>
+                <div class="theme-chip" data-color="#1f242e" style="background: #1f242e;" title="Anthrazit"></div>
+                <div class="theme-chip" data-color="#2d3340" style="background: #2d3340;" title="Studio Grau"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Collapsible Sidebar: Annotations List -->
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title-area">
+                <h2>Markierungen</h2>
+                <span id="sidebar-count-pill" class="count-pill">0 Punkte</span>
+            </div>
+            <button id="close-sidebar-btn" class="tooltip-close" aria-label="Seitenleiste einklappen">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="sidebar-tools">
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="search-input" placeholder="Punkte durchsuchen...">
+            </div>
+            <div class="sidebar-actions-row">
+                <button id="export-json-btn" class="btn-secondary-sm" title="Markierungen als JSON-Datei herunterladen">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Export
+                </button>
+                <button id="import-json-btn" class="btn-secondary-sm" title="JSON-Datei mit Markierungen importieren">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Import
+                </button>
+                <button id="clear-all-btn" class="btn-secondary-sm" style="flex: 0; padding: 7px 10px;" title="Alle Markierungen löschen">
+                    <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Hidden input for file import -->
+        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+
+        <!-- Scrollable List of Marker Cards -->
+        <div id="markers-list" class="markers-list"></div>
+    </aside>
+
+    <!-- Floating 3D Tooltip/Card -->
+    <div id="floating-tooltip" class="floating-tooltip" role="dialog" aria-labelledby="tooltip-title">
+        <div class="tooltip-header">
+            <span id="tooltip-badge" class="tooltip-badge">1</span>
+            <h4 id="tooltip-title" class="tooltip-title">Punkt-Titel</h4>
+            <button id="tooltip-close" class="tooltip-close" aria-label="Schließen">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <p id="tooltip-desc" class="tooltip-desc">Beschreibung des ausgewählten Punkts.</p>
+        <div class="tooltip-footer">
+            <button id="tooltip-focus-btn" class="btn-tooltip primary">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"></circle><line x1="12" y1="2" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="22"></line><line x1="2" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="22" y2="12"></line></svg>
+                Fokus
+            </button>
+            <button id="tooltip-edit-btn" class="btn-tooltip ghost">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Edit
+            </button>
+            <button id="tooltip-delete-btn" class="btn-tooltip ghost" style="color: #f87171;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Neuer Punkt hinzufügen -->
+    <dialog id="modal-add" class="custom-modal">
+        <form id="modal-add-form" method="dialog">
+            <div class="modal-header">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                    Neuen Punkt beschriften
+                </h3>
+            </div>
+            <div class="form-group">
+                <label for="input-title">Bezeichnung / Name *</label>
+                <input type="text" id="input-title" class="form-input" placeholder="z. B. Os naviculare (Kahnbein)" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="input-desc">Beschreibung / Notiz</label>
+                <textarea id="input-desc" class="form-textarea" placeholder="Zusätzliche anatomische oder klinische Notizen..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="cancel-add-btn" class="btn-modal btn-cancel">Abbrechen</button>
+                <button type="submit" class="btn-modal btn-save">Punkt speichern</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Modal: Punkt bearbeiten -->
+    <dialog id="modal-edit" class="custom-modal">
+        <form id="modal-edit-form" method="dialog">
+            <input type="hidden" id="edit-marker-id">
+            <div class="modal-header">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    Punkt bearbeiten
+                </h3>
+            </div>
+            <div class="form-group">
+                <label for="edit-title">Bezeichnung / Name *</label>
+                <input type="text" id="edit-title" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-desc">Beschreibung / Notiz</label>
+                <textarea id="edit-desc" class="form-textarea"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="cancel-edit-btn" class="btn-modal btn-cancel">Abbrechen</button>
+                <button type="submit" class="btn-modal btn-save">Änderungen speichern</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Loading Screen Overlay for Full_Foot.glb (38.7 MB) -->
+    <div id="loading-overlay">
+        <div class="loader-container">
+            <div class="loader-orb">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-center-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+            </div>
+            <div class="loader-title">Lade 3D-Fußmodell...</div>
+            <p class="loader-subtext">Vollständiges anatomisches Modell (Full_Foot.glb)</p>
+            <div class="progress-track">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+            <div class="progress-info">
+                <span id="progress-percent">0%</span>
+                <span id="progress-bytes">0 MB / 38.7 MB</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Main Module Application -->
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>
