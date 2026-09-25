@@ -3,21 +3,23 @@ import { AppState } from './state.js';
 
 const textureLoader = new THREE.TextureLoader();
 
+const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/$/, '') : '';
+
 // --- PBR Texture Maps ---
-export const boneAlbedoMap = textureLoader.load('bone-texture/bone_albedo.png');
+export const boneAlbedoMap = textureLoader.load(`${base}/bone-texture/bone_albedo.png`);
 boneAlbedoMap.colorSpace = THREE.SRGBColorSpace;
 boneAlbedoMap.wrapS = THREE.RepeatWrapping;
 boneAlbedoMap.wrapT = THREE.RepeatWrapping;
 
-export const boneNormalMap = textureLoader.load('bone-texture/bone_normal-ogl.png');
+export const boneNormalMap = textureLoader.load(`${base}/bone-texture/bone_normal-ogl.png`);
 boneNormalMap.wrapS = THREE.RepeatWrapping;
 boneNormalMap.wrapT = THREE.RepeatWrapping;
 
-export const boneRoughnessMap = textureLoader.load('bone-texture/bone_roughness.png');
+export const boneRoughnessMap = textureLoader.load(`${base}/bone-texture/bone_roughness.png`);
 boneRoughnessMap.wrapS = THREE.RepeatWrapping;
 boneRoughnessMap.wrapT = THREE.RepeatWrapping;
 
-export const boneAoMap = textureLoader.load('bone-texture/bone_ao.png');
+export const boneAoMap = textureLoader.load(`${base}/bone-texture/bone_ao.png`);
 boneAoMap.wrapS = THREE.RepeatWrapping;
 boneAoMap.wrapT = THREE.RepeatWrapping;
 

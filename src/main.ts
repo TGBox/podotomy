@@ -39,7 +39,8 @@ export function getFootCentroid(model: THREE.Object3D): THREE.Vector3 {
  */
 export function loadModel(): void {
     const loader = new GLTFLoader();
-    const modelUrl = 'Full_Foot.glb';
+    const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/$/, '') : '';
+    const modelUrl = `${base}/Full_Foot.glb`;
     const estimatedTotalBytes = 40605948; // ~38.7 MB
 
     loader.load(
