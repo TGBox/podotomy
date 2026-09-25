@@ -579,6 +579,16 @@ body {
     animation: fadeInTooltip 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.floating-tooltip.occluded {
+    opacity: 0.32 !important;
+    filter: brightness(0.85);
+}
+
+.floating-tooltip.occluded:hover {
+    opacity: 0.95 !important;
+    filter: brightness(1);
+}
+
 .tooltip-header {
     display: flex;
     align-items: center;

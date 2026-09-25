@@ -7,6 +7,7 @@ const AppState = {
     mode: 'navigate', // 'navigate' | 'add'
     markers: [],
     selectedMarkerId: null,
+    hoveredMarkerId: null,
     footModel: null,
     modelBoundingSphere: null,
     initialCameraPosition: new THREE.Vector3(140, 100, 200),
@@ -19,7 +20,8 @@ const AppState = {
     textureScale: 1.0,
     modelScaleFactor: 1.0,
     searchQuery: '',
-    storageKey: 'podotomy_foot_annotations_v2'
+    storageKey: 'podotomy_foot_annotations_v2',
+    interactiveMarkerObjects: []
 };
 
 // --- DOM Elements ---
@@ -236,7 +238,7 @@ function createBadgeCanvas(number, isActive = false, isHovered = false) {
 
     // Outer glow
     ctx.save();
-    ctx.shadowColor = isActive ? 'rgba(56, 189, 248, 0.9)' : (isHovered ? 'rgba(14, 165, 233, 0.8)' : 'rgba(2, 132, 199, 0.5)');
+    ctx.shadowColor = isActive ? 'rgba(56, 189, 248, 1.0)' : (isHovered ? 'rgba(14, 165, 233, 0.9)' : 'rgba(2, 132, 199, 0.6)');
     ctx.shadowBlur = isActive ? 36 : (isHovered ? 28 : 18);
 
     // Circle background gradient
@@ -262,7 +264,7 @@ function createBadgeCanvas(number, isActive = false, isHovered = false) {
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
     ctx.lineWidth = isActive ? 12 : 8;
-    ctx.strokeStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.85)';
+    ctx.strokeStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.9)';
     ctx.stroke();
 
     // Inner subtle ring
@@ -286,6 +288,47 @@ function createBadgeCanvas(number, isActive = false, isHovered = false) {
     return canvas;
 }
 
+// Small, elegant glowing dot canvas for default idle state
+function createDotCanvas(isActive = false, isHovered = false) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    const centerX = 64;
+    const centerY = 64;
+    const radius = 26;
+
+    ctx.clearRect(0, 0, 128, 128);
+
+    // Outer glow
+    ctx.save();
+    ctx.shadowColor = isActive ? 'rgba(56, 189, 248, 1.0)' : (isHovered ? 'rgba(14, 165, 233, 0.95)' : 'rgba(2, 132, 199, 0.7)');
+    ctx.shadowBlur = isActive ? 24 : (isHovered ? 18 : 12);
+
+    // Glowing core circle
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = isActive ? '#38bdf8' : (isHovered ? '#0ea5e9' : '#0284c7');
+    ctx.fill();
+    ctx.restore();
+
+    // White center pinpoint
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius * 0.45, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    // Subtle crisp rim
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius + 6, 0, Math.PI * 2);
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.5)';
+    ctx.stroke();
+
+    return canvas;
+}
+
 function createMarkerVisual(markerData) {
     const group = new THREE.Group();
     group.userData = { markerId: markerData.id, number: markerData.number };
@@ -293,41 +336,85 @@ function createMarkerVisual(markerData) {
     const scale = (AppState.modelBoundingSphere ? AppState.modelBoundingSphere.radius : 1.0) * 0.12;
 
     // 1. Surface Anchor Dot
-    const dotGeo = new THREE.SphereGeometry(scale * 0.1, 16, 16);
-    const dotMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const dotGeo = new THREE.SphereGeometry(scale * 0.08, 16, 16);
+    const dotMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 1.0,
+        depthTest: false,
+        depthWrite: false
+    });
     const dotMesh = new THREE.Mesh(dotGeo, dotMat);
     dotMesh.position.set(0, 0, 0);
+    dotMesh.renderOrder = 998;
+    dotMesh.userData = { isMarkerAnchor: true, markerId: markerData.id };
     group.add(dotMesh);
 
     // 2. Stem line connecting anchor to elevated badge
-    const stemHeight = scale * 0.45;
-    const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85, linewidth: 2 });
+    const stemHeight = scale * 0.42;
+    const lineMat = new THREE.LineBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.0,
+        linewidth: 2,
+        depthTest: false,
+        depthWrite: false
+    });
     const lineGeo = new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(0, 0, 0),
         new THREE.Vector3(0, stemHeight, 0)
     ]);
     const stemLine = new THREE.Line(lineGeo, lineMat);
+    stemLine.renderOrder = 997;
     group.add(stemLine);
 
-    // 3. Billboard Sprite Badge
-    const canvas = createBadgeCanvas(markerData.number, markerData.id === AppState.selectedMarkerId);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = THREE.LinearFilter;
+    // 3. Dual Textures: Full Badge & Minimalist Dot
+    const badgeCanvas = createBadgeCanvas(markerData.number, markerData.id === AppState.selectedMarkerId);
+    const badgeTex = new THREE.CanvasTexture(badgeCanvas);
+    badgeTex.colorSpace = THREE.SRGBColorSpace;
+    badgeTex.minFilter = THREE.LinearFilter;
+
+    const dotCanvas = createDotCanvas(markerData.id === AppState.selectedMarkerId);
+    const dotTex = new THREE.CanvasTexture(dotCanvas);
+    dotTex.colorSpace = THREE.SRGBColorSpace;
+    dotTex.minFilter = THREE.LinearFilter;
+
+    markerData.badgeTexture = badgeTex;
+    markerData.dotTexture = dotTex;
+
+    const isInitiallySelected = (markerData.id === AppState.selectedMarkerId);
 
     const spriteMat = new THREE.SpriteMaterial({
-        map: texture,
+        map: isInitiallySelected ? badgeTex : dotTex,
         transparent: true,
+        opacity: 1.0,
         depthTest: false,
         depthWrite: false
     });
 
+    const initScale = isInitiallySelected ? scale : scale * 0.32;
+    const initY = isInitiallySelected ? stemHeight : scale * 0.06;
+
     const sprite = new THREE.Sprite(spriteMat);
-    sprite.scale.set(scale, scale, 1);
-    sprite.position.set(0, stemHeight, 0);
+    sprite.scale.set(initScale, initScale, 1);
+    sprite.position.set(0, initY, 0);
     sprite.renderOrder = 999;
     sprite.userData = { isMarkerSprite: true, markerId: markerData.id };
     group.add(sprite);
+
+    // 4. Invisible generous hit sphere for effortless hover & click detection
+    const hitGeo = new THREE.SphereGeometry(scale * 0.45, 8, 8);
+    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+    const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+    hitMesh.position.set(0, scale * 0.2, 0);
+    hitMesh.userData = { isMarkerHitTarget: true, markerId: markerData.id };
+    group.add(hitMesh);
+
+    markerData.sprite = sprite;
+    markerData.stemLine = stemLine;
+    markerData.dotMesh = dotMesh;
+    markerData.hitMesh = hitMesh;
+    markerData.isOccluded = false;
 
     // Position whole group at marker coordinates and orient along normal
     group.position.set(markerData.position.x, markerData.position.y, markerData.position.z);
@@ -338,7 +425,7 @@ function createMarkerVisual(markerData) {
         group.quaternion.setFromUnitVectors(upVec, normalVec);
     }
 
-    return { group, sprite, texture };
+    return { group, sprite };
 }
 
 // Rebuild all 3D markers from AppState.markers
@@ -367,20 +454,81 @@ function syncSceneMarkers() {
     updateSidebarList();
     updateMarkerCounts();
     saveMarkersToLocalStorage();
+
+    // Cache interactive marker components for instantaneous raycasting
+    AppState.interactiveMarkerObjects = [];
+    markersGroup.children.forEach(group => {
+        group.children.forEach(child => {
+            if (child.isSprite || (child.isMesh && child.userData && (child.userData.isMarkerAnchor || child.userData.isMarkerHitTarget))) {
+                AppState.interactiveMarkerObjects.push(child);
+            }
+        });
+    });
 }
 
 function updateMarkerBadgeTexture(markerId, isActive = false, isHovered = false) {
     const marker = AppState.markers.find(m => m.id === markerId);
-    if (!marker || !marker.threeGroup) return;
+    if (!marker) return;
 
-    const sprite = marker.threeGroup.children.find(c => c.isSprite);
-    if (!sprite) return;
+    if (marker.badgeTexture) {
+        const badgeCanvas = createBadgeCanvas(marker.number, isActive, isHovered);
+        marker.badgeTexture.image = badgeCanvas;
+        marker.badgeTexture.needsUpdate = true;
+    }
+    if (marker.dotTexture) {
+        const dotCanvas = createDotCanvas(isActive, isHovered);
+        marker.dotTexture.image = dotCanvas;
+        marker.dotTexture.needsUpdate = true;
+    }
+}
 
-    const canvas = createBadgeCanvas(marker.number, isActive, isHovered);
-    if (sprite.material.map) sprite.material.map.dispose();
-    sprite.material.map = new THREE.CanvasTexture(canvas);
-    sprite.material.map.colorSpace = THREE.SRGBColorSpace;
-    sprite.material.map.needsUpdate = true;
+// Occlusion check: tests whether each marker is facing away (back side)
+const _camPos = new THREE.Vector3();
+const _markerPos = new THREE.Vector3();
+const _viewDir = new THREE.Vector3();
+const _normal = new THREE.Vector3();
+const _lastCamPos = new THREE.Vector3();
+const _lastCamRot = new THREE.Quaternion();
+
+function updateMarkerOcclusion() {
+    if (!AppState.footModel || AppState.markers.length === 0) return;
+
+    // Instant check: if camera position and rotation haven't changed, skip recalculation
+    if (camera.position.equals(_lastCamPos) && camera.quaternion.equals(_lastCamRot)) {
+        return;
+    }
+    _lastCamPos.copy(camera.position);
+    _lastCamRot.copy(camera.quaternion);
+
+    camera.getWorldPosition(_camPos);
+
+    AppState.markers.forEach(marker => {
+        if (!marker.threeGroup) return;
+
+        marker.threeGroup.getWorldPosition(_markerPos);
+        _viewDir.subVectors(_camPos, _markerPos).normalize();
+
+        // High-speed normal orientation test:
+        // A surface point is occluded when its surface normal faces away from the camera
+        if (marker.normal) {
+            _normal.set(marker.normal.x, marker.normal.y, marker.normal.z).normalize();
+            marker.isOccluded = (_normal.dot(_viewDir) < 0.0);
+        } else {
+            marker.isOccluded = false;
+        }
+    });
+
+    // Update floating tooltip card transparency if active marker is occluded
+    if (AppState.selectedMarkerId) {
+        const activeMarker = AppState.markers.find(m => m.id === AppState.selectedMarkerId);
+        if (activeMarker) {
+            if (activeMarker.isOccluded) {
+                floatingTooltip.classList.add('occluded');
+            } else {
+                floatingTooltip.classList.remove('occluded');
+            }
+        }
+    }
 }
 
 // Compute anatomical centroid of the foot body (ignoring upper protruding shin)
@@ -588,6 +736,9 @@ function selectMarker(markerId, smoothFly = true) {
     }
 }
 
+const _tooltipBadgePos = new THREE.Vector3();
+const _tooltipProjVector = new THREE.Vector3();
+
 function updateFloatingTooltipPosition() {
     if (!AppState.selectedMarkerId || !floatingTooltip.classList.contains('visible')) {
         floatingTooltip.style.display = 'none';
@@ -601,45 +752,74 @@ function updateFloatingTooltipPosition() {
         return;
     }
 
-    // Get position of the badge
-    const badgePos = new THREE.Vector3();
+    // Get position of the badge using pre-allocated vector
     const sprite = marker.threeGroup.children.find(c => c.isSprite);
     if (sprite) {
-        sprite.getWorldPosition(badgePos);
+        sprite.getWorldPosition(_tooltipBadgePos);
     } else {
-        marker.threeGroup.getWorldPosition(badgePos);
+        marker.threeGroup.getWorldPosition(_tooltipBadgePos);
     }
 
     // Project to screen coordinates
-    const vector = badgePos.clone().project(camera);
+    _tooltipProjVector.copy(_tooltipBadgePos).project(camera);
 
     // Check if behind camera
-    if (vector.z > 1) {
+    if (_tooltipProjVector.z > 1) {
         floatingTooltip.style.display = 'none';
         return;
     }
 
     floatingTooltip.style.display = 'block';
-    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+    const x = (_tooltipProjVector.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (-(_tooltipProjVector.y * 0.5) + 0.5) * window.innerHeight;
 
     floatingTooltip.style.left = `${Math.round(x)}px`;
     floatingTooltip.style.top = `${Math.round(y)}px`;
 }
 
+// Helper to gather all clickable/hoverable marker components
+function getMarkerInteractiveObjects() {
+    return AppState.interactiveMarkerObjects || [];
+}
+
 // --- 6. Interaction & Raycasting ---
+let isPointerDown = false;
 let pointerDownPos = { x: 0, y: 0 };
 
 window.addEventListener('pointerdown', (e) => {
+    isPointerDown = true;
     pointerDownPos = { x: e.clientX, y: e.clientY };
     AppState.isDragging = false;
 });
 
 window.addEventListener('pointermove', (e) => {
-    const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
-    if (dist > 5) {
-        AppState.isDragging = true;
+    // Only detect dragging if mouse button is actively held down
+    if (isPointerDown && e.buttons !== 0) {
+        const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+        if (dist > 4) {
+            AppState.isDragging = true;
+        }
+    } else {
+        isPointerDown = false;
+        AppState.isDragging = false;
     }
+
+    // Ignore marker hover if interacting with UI overlays
+    if (e.target.closest('.top-nav') ||
+        e.target.closest('.sidebar') ||
+        e.target.closest('.options-drawer') ||
+        e.target.closest('#floating-tooltip') ||
+        e.target.closest('dialog') ||
+        e.target.closest('.toast-container')) {
+        if (AppState.hoveredMarkerId !== null) {
+            AppState.hoveredMarkerId = null;
+        }
+        document.body.style.cursor = 'default';
+        return;
+    }
+
+    // If user is actively dragging/rotating the view, skip hover raycasting for 60 FPS fluidity
+    if (AppState.isDragging) return;
 
     // Hover effect on markers in Navigate mode
     if (AppState.mode === 'navigate') {
@@ -647,11 +827,14 @@ window.addEventListener('pointermove', (e) => {
         mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
 
-        const hitSprites = raycaster.intersectObjects(
-            markersGroup.children.flatMap(g => g.children.filter(c => c.isSprite))
-        );
+        const hitMarkers = raycaster.intersectObjects(getMarkerInteractiveObjects());
+        const newHoveredId = hitMarkers.length > 0 ? hitMarkers[0].object.userData.markerId : null;
 
-        if (hitSprites.length > 0) {
+        if (newHoveredId !== AppState.hoveredMarkerId) {
+            AppState.hoveredMarkerId = newHoveredId;
+        }
+
+        if (AppState.hoveredMarkerId) {
             document.body.style.cursor = 'pointer';
         } else {
             document.body.style.cursor = 'default';
@@ -659,9 +842,22 @@ window.addEventListener('pointermove', (e) => {
     }
 });
 
+window.addEventListener('pointerleave', () => {
+    isPointerDown = false;
+    AppState.isDragging = false;
+    if (AppState.hoveredMarkerId !== null) {
+        AppState.hoveredMarkerId = null;
+        document.body.style.cursor = 'default';
+    }
+});
+
 window.addEventListener('pointerup', (e) => {
+    const wasDragging = AppState.isDragging;
+    isPointerDown = false;
+    AppState.isDragging = false;
+
     // Ignore drags
-    if (AppState.isDragging) return;
+    if (wasDragging) return;
 
     // Ignore clicks on UI overlays
     if (e.target.closest('.top-nav') ||
@@ -677,14 +873,12 @@ window.addEventListener('pointerup', (e) => {
     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
 
-    // 1. Check if an existing marker sprite was clicked
-    const spriteHits = raycaster.intersectObjects(
-        markersGroup.children.flatMap(g => g.children.filter(c => c.isSprite))
-    );
+    // 1. Check if an existing marker was clicked (either badge sprite or anchor dot)
+    const markerHits = raycaster.intersectObjects(getMarkerInteractiveObjects());
 
-    if (spriteHits.length > 0) {
-        const clickedSprite = spriteHits[0].object;
-        const markerId = clickedSprite.userData.markerId;
+    if (markerHits.length > 0) {
+        const clickedObj = markerHits[0].object;
+        const markerId = clickedObj.userData.markerId;
         selectMarker(markerId, true);
         return;
     }
@@ -1247,18 +1441,69 @@ function animate(time) {
         controls.update();
     }
 
-    // Active marker gentle pulsing
-    if (AppState.selectedMarkerId) {
-        const marker = AppState.markers.find(m => m.id === AppState.selectedMarkerId);
-        if (marker && marker.threeGroup) {
-            const sprite = marker.threeGroup.children.find(c => c.isSprite);
-            if (sprite) {
-                const baseScale = (AppState.modelBoundingSphere ? AppState.modelBoundingSphere.radius : 1.0) * 0.12;
-                const pulse = 1.0 + 0.08 * Math.sin(time * 0.006);
-                sprite.scale.set(baseScale * pulse, baseScale * pulse, 1);
-            }
+    // 1. Occlusion detection: tests if markers are behind the foot model or facing away
+    updateMarkerOcclusion();
+
+    // 2. Dynamic marker visuals: idle small dot vs expanded numbered badge, occlusion transparency, lerping
+    const baseRadius = (AppState.modelBoundingSphere ? AppState.modelBoundingSphere.radius : 1.0);
+    const markerScale = baseRadius * 0.12;
+    const stemHeight = markerScale * 0.42;
+
+    AppState.markers.forEach(marker => {
+        if (!marker.threeGroup) return;
+
+        const sprite = marker.sprite;
+        const stemLine = marker.stemLine;
+        const dotMesh = marker.dotMesh;
+        if (!sprite) return;
+
+        const isSelected = (marker.id === AppState.selectedMarkerId);
+        const isHovered = (marker.id === AppState.hoveredMarkerId);
+        const isExpanded = isSelected || isHovered;
+        const isOccluded = !!marker.isOccluded;
+
+        // Texture swap: expanded shows full badge with number; idle shows glowing dot
+        const targetTexture = isExpanded ? marker.badgeTexture : marker.dotTexture;
+        if (sprite.material.map !== targetTexture && targetTexture) {
+            sprite.material.map = targetTexture;
+            sprite.material.needsUpdate = true;
         }
-    }
+
+        // Target scale and position
+        let targetScale = isExpanded ? markerScale : markerScale * 0.32;
+        if (isSelected) {
+            // Gentle rhythmic pulsing when selected
+            targetScale *= (1.0 + 0.06 * Math.sin(time * 0.006));
+        }
+        const targetY = isExpanded ? stemHeight : markerScale * 0.06;
+
+        // Target opacities:
+        // Occluded (behind foot): ~0.25 (idle dot) or ~0.45 (expanded/hovered)
+        // Visible (front of foot): 1.0
+        let targetSpriteOpacity;
+        if (isOccluded) {
+            targetSpriteOpacity = isExpanded ? 0.45 : 0.25;
+        } else {
+            targetSpriteOpacity = 1.0;
+        }
+
+        const targetStemOpacity = isExpanded ? (isOccluded ? 0.25 : 0.85) : 0.0;
+        const targetDotOpacity = isOccluded ? 0.28 : 1.0;
+
+        // Smooth lerping for fluid visual transition
+        const lerpFactor = 0.2;
+        sprite.scale.x += (targetScale - sprite.scale.x) * lerpFactor;
+        sprite.scale.y += (targetScale - sprite.scale.y) * lerpFactor;
+        sprite.position.y += (targetY - sprite.position.y) * lerpFactor;
+
+        sprite.material.opacity += (targetSpriteOpacity - sprite.material.opacity) * lerpFactor;
+        if (stemLine) {
+            stemLine.material.opacity += (targetStemOpacity - stemLine.material.opacity) * lerpFactor;
+        }
+        if (dotMesh) {
+            dotMesh.material.opacity += (targetDotOpacity - dotMesh.material.opacity) * lerpFactor;
+        }
+    });
 
     // Update floating tooltip position in 2D screen space
     updateFloatingTooltipPosition();
