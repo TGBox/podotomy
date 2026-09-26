@@ -1,0 +1,133 @@
+{
+  "model": "bones_foot.glb & skin_foot.glb",
+  "exportedAt": "2026-09-26T11:11:11.494Z",
+  "markersCount": 7,
+  "annotations": [
+    {
+      "id": "marker_1790420785995_hb7kz3",
+      "number": 1,
+      "title": "Vorne am Zeh",
+      "description": "Der Punkt sollte vorne, leicht unten am Großen Zeh liegen.",
+      "position": {
+        "x": -6.795993920946529,
+        "y": -19.462809478915588,
+        "z": 112.01540248280577
+      },
+      "normal": {
+        "x": 0.2836912642367241,
+        "y": -0.18308927492978744,
+        "z": 0.9412744466952526
+      },
+      "createdAt": "2026-09-26T11:06:25.995Z",
+      "view": "skin"
+    },
+    {
+      "id": "marker_1790420855901_wt4znh",
+      "number": 2,
+      "title": "Zwischen den Zehen",
+      "description": "Der Punkt liegt zwischen den kleinen und dem nächstgrößeren Zeh.",
+      "position": {
+        "x": -66.03645036796976,
+        "y": -5.870568990865992,
+        "z": 36.68615357801412
+      },
+      "normal": {
+        "x": -0.18490716917090952,
+        "y": 0.4598038993695749,
+        "z": 0.8685561080976487
+      },
+      "createdAt": "2026-09-26T11:07:35.901Z",
+      "view": "skin"
+    },
+    {
+      "id": "marker_1790420901223_35eb2n",
+      "number": 3,
+      "title": "Rückseite vom Fuß",
+      "description": "Ganz hinten wo die Archillessehne verläuft.",
+      "position": {
+        "x": 28.425893869876123,
+        "y": 48.37578099194806,
+        "z": -153.01209862364632
+      },
+      "normal": {
+        "x": -0.15808314460899045,
+        "y": 0.1642002227285622,
+        "z": -0.9736775679075819
+      },
+      "createdAt": "2026-09-26T11:08:21.223Z",
+      "view": "skin"
+    },
+    {
+      "id": "marker_1790420936729_vrphm4",
+      "number": 4,
+      "title": "Ferse von unten",
+      "description": "Ganz von unten an der Hornhaut der Ferse.",
+      "position": {
+        "x": 14.322731611549775,
+        "y": -31.225543365102794,
+        "z": -112.91758494043907
+      },
+      "normal": {
+        "x": 0.002195660845184406,
+        "y": -0.996614182769871,
+        "z": 0.08219093487359255
+      },
+      "createdAt": "2026-09-26T11:08:56.729Z",
+      "view": "skin"
+    },
+    {
+      "id": "marker_1790420982403_9n7aml",
+      "number": 1,
+      "title": "Spitze des großen Zehenknochens.",
+      "description": "",
+      "position": {
+        "x": -22.86140285902488,
+        "y": -29.100376932152855,
+        "z": 110.73950269857674
+      },
+      "normal": {
+        "x": -0.6109199533835966,
+        "y": -0.38096880014410744,
+        "z": 0.6940025820373749
+      },
+      "createdAt": "2026-09-26T11:09:42.403Z",
+      "view": "bone"
+    },
+    {
+      "id": "marker_1790421008380_oxnb8c",
+      "number": 2,
+      "title": "Am Fersenknochen hinten unten",
+      "description": "",
+      "position": {
+        "x": 47.46320448689566,
+        "y": -18.380113066566942,
+        "z": -89.00529025098834
+      },
+      "normal": {
+        "x": 0.6746732165052334,
+        "y": -0.26208720462481155,
+        "z": -0.6900190925637018
+      },
+      "createdAt": "2026-09-26T11:10:08.380Z",
+      "view": "bone"
+    },
+    {
+      "id": "marker_1790421038766_zdyfb4",
+      "number": 3,
+      "title": "Spitze des kleinen Zehenknochens.",
+      "description": "",
+      "position": {
+        "x": -68.84483609710179,
+        "y": -29.316671789988224,
+        "z": 60.57852482535744
+      },
+      "normal": {
+        "x": -0.7100901564334209,
+        "y": 0.31885518204693064,
+        "z": 0.627776506902081
+      },
+      "createdAt": "2026-09-26T11:10:38.766Z",
+      "view": "bone"
+    }
+  ]
+}

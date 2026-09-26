@@ -17,16 +17,36 @@
 
     <!-- Top Navigation Bar -->
     <header class="top-nav">
-        <!-- Brand / Title -->
-        <div class="brand-badge">
-            <div class="brand-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                </svg>
+        <!-- Left Section: Brand & View Switcher -->
+        <div class="top-nav-left">
+            <div class="brand-badge">
+                <div class="brand-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                </div>
+                <div class="brand-info">
+                    <h1>Podotomy 3D</h1>
+                    <p>Fuß-Anatomie Annotator</p>
+                </div>
             </div>
-            <div class="brand-info">
-                <h1>Podotomy 3D</h1>
-                <p>Fuß-Anatomie Annotator</p>
+
+            <!-- Anatomical Layer Switcher (Knochen vs Haut) -->
+            <div class="view-toggle-container" role="radiogroup" aria-label="Anatomische Ansicht">
+                <button id="view-bone-btn" class="view-toggle-btn active" role="radio" aria-checked="true" title="Knochenansicht (Skelett)">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 10c.7-.7 1.6-1 2.5-1a3.5 3.5 0 1 1 0 7c-.9 0-1.8-.3-2.5-1l-10-10c-.7.7-1.6 1-2.5 1a3.5 3.5 0 1 1 0-7c.9 0 1.8.3 2.5 1z" />
+                    </svg>
+                    <span>Knochen</span>
+                </button>
+                <button id="view-skin-btn" class="view-toggle-btn" role="radio" aria-checked="false" title="Hautansicht (Oberfläche & Weichgewebe)">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 3a9 9 0 0 0 0 18" />
+                        <path d="M3 12h18" />
+                    </svg>
+                    <span>Haut</span>
+                </button>
             </div>
         </div>
 
@@ -73,7 +93,7 @@
         </div>
 
         <div class="option-row">
-            <span class="option-label">Knochen-Textur (PBR)</span>
+            <span class="option-label">PBR-Oberflächentextur</span>
             <label class="switch">
                 <input type="checkbox" id="texture-toggle" checked>
                 <span class="slider-toggle"></span>

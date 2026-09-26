@@ -9,6 +9,13 @@
     --primary-hover: #38bdf8;
     --primary-glow: rgba(14, 165, 233, 0.35);
 
+    --skin-primary: #ea580c;
+    --skin-primary-hover: #f97316;
+    --skin-primary-glow: rgba(249, 115, 22, 0.4);
+    --skin-accent: #fb923c;
+    --skin-border-highlight: rgba(251, 146, 60, 0.35);
+    --skin-border-active: rgba(249, 115, 22, 0.75);
+
     --accent: #06b6d4;
     --accent-glow: rgba(6, 182, 212, 0.3);
     --success: #10b981;
@@ -87,6 +94,13 @@ body {
     z-index: 10;
 }
 
+.top-nav-left {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .brand-badge {
     pointer-events: auto;
     display: flex;
@@ -99,6 +113,60 @@ body {
     padding: 8px 18px 8px 12px;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
+}
+
+/* Segmented Anatomical View Switcher */
+.view-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    padding: 4px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.view-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+
+.view-toggle-btn svg {
+    flex-shrink: 0;
+}
+
+.view-toggle-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.view-toggle-btn.active#view-bone-btn {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    color: #ffffff;
+    box-shadow: 0 2px 12px var(--primary-glow);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.view-toggle-btn.active#view-skin-btn {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #ffffff;
+    box-shadow: 0 2px 12px var(--skin-primary-glow);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .brand-icon {
@@ -454,6 +522,16 @@ body {
     box-shadow: 0 0 16px var(--primary-glow);
 }
 
+.marker-card.skin-marker:hover {
+    border-color: var(--skin-border-highlight);
+}
+
+.marker-card.skin-marker.active {
+    border-color: var(--skin-accent);
+    background: rgba(234, 88, 12, 0.15);
+    box-shadow: 0 0 16px var(--skin-primary-glow);
+}
+
 .marker-badge-icon {
     width: 32px;
     height: 32px;
@@ -467,6 +545,11 @@ body {
     font-size: 13px;
     flex-shrink: 0;
     box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.marker-card.skin-marker .marker-badge-icon {
+    background: linear-gradient(135deg, #fb923c, #ea580c);
+    box-shadow: 0 0 10px var(--skin-primary-glow);
 }
 
 .marker-details {
@@ -556,7 +639,6 @@ body {
     line-height: 1.5;
 }
 
-/* 3D Floating Popup Card */
 .floating-tooltip {
     position: absolute;
     z-index: 15;
@@ -572,6 +654,11 @@ body {
     transition: opacity var(--transition-fast), transform var(--transition-fast);
     transform: translate(-50%, -100%) translateY(-24px);
     display: none;
+}
+
+.floating-tooltip.skin-tooltip {
+    border-color: var(--skin-border-highlight);
+    box-shadow: var(--shadow-lg), 0 0 20px var(--skin-primary-glow);
 }
 
 .floating-tooltip.visible {
@@ -608,6 +695,11 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+}
+
+.floating-tooltip.skin-tooltip .tooltip-badge {
+    background: linear-gradient(135deg, #fb923c, #ea580c);
+    box-shadow: 0 0 10px var(--skin-primary-glow);
 }
 
 .tooltip-title {

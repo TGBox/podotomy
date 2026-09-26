@@ -6,8 +6,8 @@ import type { AnnotationMarker, ExportData } from './types.js';
  */
 export function saveMarkersToLocalStorage(): void {
     try {
-        const cleanMarkers = AppState.markers.map(({ id, number, title, description, position, normal, createdAt }) => ({
-            id, number, title, description, position, normal, createdAt
+        const cleanMarkers = AppState.markers.map(({ id, number, title, description, position, normal, createdAt, view }) => ({
+            id, number, title, description, position, normal, createdAt, view: view || 'bone'
         }));
         localStorage.setItem(AppState.storageKey, JSON.stringify(cleanMarkers));
     } catch (err) {
@@ -22,7 +22,11 @@ export function loadMarkersFromLocalStorage(): void {
     try {
         let raw = localStorage.getItem('podotomy_foot_annotations_v2');
         if (raw) {
-            AppState.markers = JSON.parse(raw);
+            const parsed: AnnotationMarker[] = JSON.parse(raw);
+            parsed.forEach(m => {
+                if (!m.view) m.view = 'bone';
+            });
+            AppState.markers = parsed;
             return;
         }
 
@@ -31,6 +35,7 @@ export function loadMarkersFromLocalStorage(): void {
         if (raw) {
             const v1Markers: AnnotationMarker[] = JSON.parse(raw);
             v1Markers.forEach(m => {
+                m.view = 'bone';
                 if (m.position) {
                     if (m.position.x < -35 && m.position.y < -35) {
                         m.position.x += 106.843;
@@ -73,11 +78,11 @@ export function exportMarkersJSON(): boolean {
     }
 
     const cleanData: ExportData = {
-        model: 'bones_foot.glb',
+        model: 'bones_foot.glb & skin_foot.glb',
         exportedAt: new Date().toISOString(),
         markersCount: AppState.markers.length,
-        annotations: AppState.markers.map(({ id, number, title, description, position, normal, createdAt }) => ({
-            id, number, title, description, position, normal, createdAt
+        annotations: AppState.markers.map(({ id, number, title, description, position, normal, createdAt, view }) => ({
+            id, number, title, description, position, normal, createdAt, view: view || 'bone'
         }))
     };
 
@@ -117,8 +122,13 @@ export function importMarkersJSON(
                 throw new Error('Ungültiges Format: Keine Markierungsliste gefunden.');
             }
 
-            // Validate format
-            const validMarkers = importedMarkers.filter(m => m && m.title && m.position && typeof m.position.x === 'number');
+            // Validate format and ensure view is typed properly
+            const validMarkers = importedMarkers
+                .filter(m => m && m.title && m.position && typeof m.position.x === 'number')
+                .map(m => ({
+                    ...m,
+                    view: (m.view === 'skin' ? 'skin' : 'bone') as 'bone' | 'skin'
+                }));
 
             if (validMarkers.length === 0) {
                 throw new Error('Keine gültigen Markierungen in der Datei gefunden.');

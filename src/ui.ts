@@ -1,13 +1,15 @@
 import * as THREE from 'three';
 import { AppState } from './state.js';
 import { scene, ambientLight, dirLight } from './scene.js';
-import { boneMaterial, defaultMaterial, updateTextureScale } from './materials.js';
+import { boneMaterial, defaultMaterial, updateTextureScale, skinMaterial, defaultSkinMaterial, updateSkinTextureScale } from './materials.js';
 import { exportMarkersJSON, importMarkersJSON } from './storage.js';
-import type { ActionHandlers, InteractionMode } from './types.js';
+import type { ActionHandlers, InteractionMode, AnnotationMarker } from './types.js';
 
 // --- Cached DOM Element References ---
 export const dom = {
     get canvasContainer() { return document.getElementById('canvas-container') as HTMLElement; },
+    get viewBoneBtn() { return document.getElementById('view-bone-btn') as HTMLButtonElement; },
+    get viewSkinBtn() { return document.getElementById('view-skin-btn') as HTMLButtonElement; },
     get modeNavBtn() { return document.getElementById('mode-nav-btn') as HTMLButtonElement; },
     get modeAddBtn() { return document.getElementById('mode-add-btn') as HTMLButtonElement; },
     get modeBanner() { return document.getElementById('mode-banner') as HTMLElement; },
@@ -64,7 +66,8 @@ export const dom = {
 let actions: ActionHandlers = {
     selectMarker: () => {},
     syncSceneMarkers: () => {},
-    resetCameraView: () => {}
+    resetCameraView: () => {},
+    switchView: () => {}
 };
 
 /**
@@ -109,9 +112,48 @@ export function setMode(newMode: InteractionMode): void {
         dom.modeAddBtn?.classList.add('active');
         dom.modeNavBtn?.classList.remove('active');
         dom.modeBanner?.classList.remove('hidden');
+        if (dom.modeBanner) {
+            const span = dom.modeBanner.querySelector('span:last-child');
+            if (span) {
+                span.textContent = AppState.activeView === 'skin'
+                    ? 'Klicke auf die Fußhaut, um eine Beschriftung zu platzieren'
+                    : 'Klicke auf das Knochenmodell, um eine Beschriftung zu platzieren';
+            }
+        }
         dom.canvasContainer?.classList.add('crosshair-cursor');
         actions.selectMarker?.(null); // deselect existing when in add mode
     }
+}
+
+/**
+ * Switches active anatomical model view between 'bone' and 'skin'
+ */
+export function setActiveView(newView: 'bone' | 'skin'): void {
+    if (AppState.activeView === newView) return;
+    AppState.activeView = newView;
+
+    if (dom.viewBoneBtn) {
+        dom.viewBoneBtn.classList.toggle('active', newView === 'bone');
+        dom.viewBoneBtn.setAttribute('aria-checked', String(newView === 'bone'));
+    }
+    if (dom.viewSkinBtn) {
+        dom.viewSkinBtn.classList.toggle('active', newView === 'skin');
+        dom.viewSkinBtn.setAttribute('aria-checked', String(newView === 'skin'));
+    }
+
+    if (dom.modeBanner) {
+        const span = dom.modeBanner.querySelector('span:last-child');
+        if (span) {
+            span.textContent = newView === 'skin'
+                ? 'Klicke auf die Fußhaut, um eine Beschriftung zu platzieren'
+                : 'Klicke auf das Knochenmodell, um eine Beschriftung zu platzieren';
+        }
+    }
+
+    actions.switchView?.(newView);
+    updateSidebarList();
+    updateMarkerCounts();
+    showToast(newView === 'skin' ? 'Hautansicht aktiviert' : 'Knochenansicht aktiviert', 'info');
 }
 
 /**
@@ -157,20 +199,24 @@ export function deleteMarker(markerId: string): void {
 }
 
 /**
- * Renders filtered sidebar annotations list
+ * Renders filtered sidebar annotations list for the ACTIVE view only
  */
 export function updateSidebarList(): void {
     if (!dom.markersList) return;
 
+    const currentView = AppState.activeView;
+    const currentViewMarkers = AppState.markers.filter(m => (m.view || 'bone') === currentView);
     const query = AppState.searchQuery.toLowerCase().trim();
-    const filtered = AppState.markers.filter(m => {
+    const filtered = currentViewMarkers.filter(m => {
         return m.title.toLowerCase().includes(query) || (m.description && m.description.toLowerCase().includes(query));
     });
 
     dom.markersList.innerHTML = '';
 
     if (filtered.length === 0) {
-        if (AppState.markers.length === 0) {
+        if (currentViewMarkers.length === 0) {
+            const viewName = currentView === 'skin' ? 'Hautansicht' : 'Knochenansicht';
+            const modelTarget = currentView === 'skin' ? 'die Fußhaut' : 'das Knochenmodell';
             dom.markersList.innerHTML = `
                 <div class="empty-state">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -178,7 +224,7 @@ export function updateSidebarList(): void {
                         <line x1="12" y1="8" x2="12" y2="12"></line>
                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
                     </svg>
-                    <p>Noch keine Punkte gesetzt.<br>Wähle oben <strong>"Punkt hinzufügen"</strong> und klicke auf das 3D-Fußmodell.</p>
+                    <p>Noch keine Punkte in der <strong>${viewName}</strong> gesetzt.<br>Wähle oben <strong>"Punkt hinzufügen"</strong> und klicke auf ${modelTarget}.</p>
                 </div>
             `;
         } else {
@@ -192,8 +238,9 @@ export function updateSidebarList(): void {
     }
 
     filtered.forEach(marker => {
+        const isSkin = (marker.view || 'bone') === 'skin';
         const card = document.createElement('div');
-        card.className = `marker-card ${marker.id === AppState.selectedMarkerId ? 'active' : ''}`;
+        card.className = `marker-card ${isSkin ? 'skin-marker' : ''} ${marker.id === AppState.selectedMarkerId ? 'active' : ''}`;
         card.dataset.markerId = marker.id;
 
         card.innerHTML = `
@@ -266,10 +313,11 @@ export function updateSidebarCardHighlight(selectedId: string | null): void {
 }
 
 /**
- * Updates marker count badges in header and sidebar
+ * Updates marker count badges in header and sidebar for current view
  */
 export function updateMarkerCounts(): void {
-    const count = AppState.markers.length;
+    const currentViewMarkers = AppState.markers.filter(m => (m.view || 'bone') === AppState.activeView);
+    const count = currentViewMarkers.length;
     if (dom.markerCountBadge) dom.markerCountBadge.textContent = String(count);
     if (dom.sidebarCountPill) dom.sidebarCountPill.textContent = `${count} ${count === 1 ? 'Punkt' : 'Punkte'}`;
 }
@@ -279,6 +327,10 @@ export function updateMarkerCounts(): void {
  */
 export function initUI(actionHandlers: ActionHandlers): void {
     actions = { ...actions, ...actionHandlers };
+
+    // --- View Toggle Buttons ---
+    dom.viewBoneBtn?.addEventListener('click', () => setActiveView('bone'));
+    dom.viewSkinBtn?.addEventListener('click', () => setActiveView('skin'));
 
     // --- Mode Buttons ---
     dom.modeNavBtn?.addEventListener('click', () => setMode('navigate'));
@@ -301,14 +353,16 @@ export function initUI(actionHandlers: ActionHandlers): void {
         // Slight offset along face normal to avoid surface clipping
         const pos = AppState.pendingHit.point.clone().addScaledVector(AppState.pendingHit.normal, 0.001);
 
-        const newMarker = {
+        const currentViewMarkers = AppState.markers.filter(m => (m.view || 'bone') === AppState.activeView);
+        const newMarker: AnnotationMarker = {
             id: 'marker_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
-            number: AppState.markers.length + 1,
+            number: currentViewMarkers.length + 1,
             title: title,
             description: description,
             position: { x: pos.x, y: pos.y, z: pos.z },
             normal: { x: AppState.pendingHit.normal.x, y: AppState.pendingHit.normal.y, z: AppState.pendingHit.normal.z },
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            view: AppState.activeView
         };
 
         AppState.markers.push(newMarker);
@@ -385,13 +439,21 @@ export function initUI(actionHandlers: ActionHandlers): void {
     // --- Display & Render Options Drawer ---
     dom.textureToggle?.addEventListener('change', (e) => {
         AppState.useTexture = (e.target as HTMLInputElement).checked;
-        if (AppState.footModel) {
-            AppState.footModel.traverse((child) => {
+        if (AppState.boneModel) {
+            AppState.boneModel.traverse((child) => {
                 const mesh = child as THREE.Mesh;
                 if (mesh.isMesh) {
                     mesh.material = AppState.useTexture ? boneMaterial : defaultMaterial;
-                    const mat = mesh.material as THREE.MeshStandardMaterial;
-                    mat.wireframe = AppState.wireframeEnabled;
+                    (mesh.material as THREE.MeshStandardMaterial).wireframe = AppState.wireframeEnabled;
+                }
+            });
+        }
+        if (AppState.skinModel) {
+            AppState.skinModel.traverse((child) => {
+                const mesh = child as THREE.Mesh;
+                if (mesh.isMesh) {
+                    mesh.material = AppState.useTexture ? skinMaterial : defaultSkinMaterial;
+                    (mesh.material as THREE.MeshStandardMaterial).wireframe = AppState.wireframeEnabled;
                 }
             });
         }
@@ -401,12 +463,15 @@ export function initUI(actionHandlers: ActionHandlers): void {
         const val = parseFloat((e.target as HTMLInputElement).value);
         if (dom.texScaleValSpan) dom.texScaleValSpan.textContent = `${val.toFixed(1)}x`;
         updateTextureScale(val);
+        updateSkinTextureScale(val);
     });
 
     dom.wireframeToggle?.addEventListener('change', (e) => {
         AppState.wireframeEnabled = (e.target as HTMLInputElement).checked;
         boneMaterial.wireframe = AppState.wireframeEnabled;
         defaultMaterial.wireframe = AppState.wireframeEnabled;
+        skinMaterial.wireframe = AppState.wireframeEnabled;
+        defaultSkinMaterial.wireframe = AppState.wireframeEnabled;
         if (AppState.footModel) {
             AppState.footModel.traverse((child) => {
                 const mesh = child as THREE.Mesh;

@@ -36,11 +36,49 @@ export const boneMaterial = new THREE.MeshStandardMaterial({
     wireframe: false
 });
 
+// --- Skin PBR Texture Maps ---
+export const skinAlbedoMap = textureLoader.load(`${base}/skin-texture/skin_0001_color_2k.jpg`);
+skinAlbedoMap.colorSpace = THREE.SRGBColorSpace;
+skinAlbedoMap.wrapS = THREE.RepeatWrapping;
+skinAlbedoMap.wrapT = THREE.RepeatWrapping;
+
+export const skinNormalMap = textureLoader.load(`${base}/skin-texture/skin_0001_normal_directx_2k.png`);
+skinNormalMap.wrapS = THREE.RepeatWrapping;
+skinNormalMap.wrapT = THREE.RepeatWrapping;
+
+export const skinRoughnessMap = textureLoader.load(`${base}/skin-texture/skin_0001_roughness_2k.jpg`);
+skinRoughnessMap.wrapS = THREE.RepeatWrapping;
+skinRoughnessMap.wrapT = THREE.RepeatWrapping;
+
+export const skinAoMap = textureLoader.load(`${base}/skin-texture/skin_0001_ao_2k.jpg`);
+skinAoMap.wrapS = THREE.RepeatWrapping;
+skinAoMap.wrapT = THREE.RepeatWrapping;
+
+// --- Skin PBR Material ---
+export const skinMaterial = new THREE.MeshStandardMaterial({
+    map: skinAlbedoMap,
+    normalMap: skinNormalMap,
+    normalScale: new THREE.Vector2(0.85, 0.85),
+    roughnessMap: skinRoughnessMap,
+    roughness: 0.65,
+    metalness: 0.02,
+    aoMap: skinAoMap,
+    aoMapIntensity: 0.5,
+    wireframe: false
+});
+
 // --- Default Solid Material (Fallback/Clean state) ---
 export const defaultMaterial = new THREE.MeshStandardMaterial({
     color: 0xedf2f7,
     roughness: 0.6,
     metalness: 0.1,
+    wireframe: false
+});
+
+export const defaultSkinMaterial = new THREE.MeshStandardMaterial({
+    color: 0xdec1a6,
+    roughness: 0.65,
+    metalness: 0.02,
     wireframe: false
 });
 
@@ -51,6 +89,20 @@ export const defaultMaterial = new THREE.MeshStandardMaterial({
 export function updateTextureScale(scaleFactor: number): void {
     AppState.textureScale = scaleFactor;
     [boneAlbedoMap, boneNormalMap, boneRoughnessMap, boneAoMap].forEach(tex => {
+        if (tex) {
+            tex.repeat.set(scaleFactor, scaleFactor);
+            tex.needsUpdate = true;
+        }
+    });
+}
+
+/**
+ * Updates the UV repeat scale factor for all skin texture maps
+ * @param scaleFactor Multiplier for texture tiling
+ */
+export function updateSkinTextureScale(scaleFactor: number): void {
+    AppState.skinTextureScale = scaleFactor;
+    [skinAlbedoMap, skinNormalMap, skinRoughnessMap, skinAoMap].forEach(tex => {
         if (tex) {
             tex.repeat.set(scaleFactor, scaleFactor);
             tex.needsUpdate = true;

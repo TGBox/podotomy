@@ -13,6 +13,11 @@ function copyStaticAssets() {
         if (fs.existsSync(glbSrc)) {
           fs.copyFileSync(glbSrc, glbDest);
         }
+        const skinGlbSrc = path.resolve(__dirname, 'skin_foot.glb');
+        const skinGlbDest = path.resolve(dist, 'skin_foot.glb');
+        if (fs.existsSync(skinGlbSrc)) {
+          fs.copyFileSync(skinGlbSrc, skinGlbDest);
+        }
         const texSrc = path.resolve(__dirname, 'bone-texture');
         const texDest = path.resolve(dist, 'bone-texture');
         if (fs.existsSync(texSrc)) {

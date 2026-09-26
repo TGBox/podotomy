@@ -45,6 +45,8 @@ export function selectMarker(markerId: string | null, smoothFly = true): void {
     if (dom.tooltipTitle) dom.tooltipTitle.textContent = marker.title;
     if (dom.tooltipDesc) dom.tooltipDesc.textContent = marker.description || 'Keine Notiz vorhanden.';
     if (dom.floatingTooltip) {
+        const isSkin = (marker.view || 'bone') === 'skin';
+        dom.floatingTooltip.classList.toggle('skin-tooltip', isSkin);
         dom.floatingTooltip.style.display = 'block';
         dom.floatingTooltip.classList.add('visible');
     }

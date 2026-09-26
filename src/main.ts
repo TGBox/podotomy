@@ -1,13 +1,20 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { AppState } from './state.js';
+import { AppState, getSelectedMarker } from './state.js';
 import { scene, camera, renderer, controls } from './scene.js';
-import { boneMaterial, defaultMaterial, generateBoxUVs } from './materials.js';
+import {
+    boneMaterial,
+    defaultMaterial,
+    skinMaterial,
+    defaultSkinMaterial,
+    generateBoxUVs
+} from './materials.js';
 import { syncSceneMarkers, updateMarkerOcclusion, onMarkersChanged } from './markers.js';
 import { resetCameraView } from './camera.js';
 import { loadMarkersFromLocalStorage } from './storage.js';
 import { dom, initUI, updateSidebarList, updateMarkerCounts, showToast } from './ui.js';
 import { setupInteractions, selectMarker, updateFloatingTooltipPosition } from './interactions.js';
+import type { ModelViewType } from './types.js';
 
 /**
  * Computes anatomical centroid of the foot body (ignoring upper protruding shin bone)
@@ -35,31 +42,80 @@ export function getFootCentroid(model: THREE.Object3D): THREE.Vector3 {
 }
 
 /**
- * Loads bones_foot.glb, centers the model, generates UVs, frames camera, and loads markers
+ * Switches the active visible 3D model between bone and skin
+ */
+export function switchView(newView: ModelViewType): void {
+    AppState.activeView = newView;
+
+    if (newView === 'bone') {
+        if (AppState.boneModel) AppState.boneModel.visible = true;
+        if (AppState.skinModel) AppState.skinModel.visible = false;
+        AppState.footModel = AppState.boneModel;
+    } else {
+        if (AppState.skinModel) AppState.skinModel.visible = true;
+        if (AppState.boneModel) AppState.boneModel.visible = false;
+        AppState.footModel = AppState.skinModel;
+    }
+
+    // Deselect if active marker was from the other view
+    if (AppState.selectedMarkerId) {
+        const selected = getSelectedMarker();
+        if (selected && (selected.view || 'bone') !== newView) {
+            selectMarker(null);
+        }
+    }
+
+    // Update marker 3D representations and raycasting interactive targets
+    syncSceneMarkers();
+}
+
+/**
+ * Loads bones_foot.glb and skin_foot.glb, aligns them, generates UVs, frames camera, and loads markers
  */
 export function loadModel(): void {
     const loader = new GLTFLoader();
     const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/$/, '') : '';
-    const modelUrl = `${base}/bones_foot.glb`;
-    const estimatedTotalBytes = 40605948; // ~38.7 MB
+    const boneUrl = `${base}/bones_foot.glb`;
+    const skinUrl = `${base}/skin_foot.glb`;
 
+    let boneLoaded = false;
+    let skinLoaded = false;
+    let boneBytesLoaded = 0;
+    const totalEstimatedBytes = 40605948 + 2923652; // ~43.5 MB
+
+    function checkAllLoaded(): void {
+        if (!boneLoaded || !skinLoaded) return;
+
+        // Load saved markers from LocalStorage FIRST before any scene sync
+        loadMarkersFromLocalStorage();
+
+        // Initial view setup (updates visibility and syncs scene markers)
+        switchView(AppState.activeView);
+
+        // Fade out loading screen
+        setTimeout(() => {
+            dom.loadingOverlay?.classList.add('fade-out');
+        }, 300);
+    }
+
+    // 1. Load Bone Model
     loader.load(
-        modelUrl,
+        boneUrl,
         (gltf) => {
-            AppState.footModel = gltf.scene;
+            AppState.boneModel = gltf.scene;
 
             // Center foot based on vertex density inside the foot body
-            const footCenter = getFootCentroid(AppState.footModel);
-            AppState.footModel.position.sub(footCenter);
-            AppState.footModel.updateMatrixWorld(true);
+            const footCenter = getFootCentroid(AppState.boneModel);
+            AppState.boneModel.position.sub(footCenter);
+            AppState.boneModel.updateMatrixWorld(true);
 
             // Compute bounding sphere after centering for auto-framing
-            const box = new THREE.Box3().setFromObject(AppState.footModel);
+            const box = new THREE.Box3().setFromObject(AppState.boneModel);
             const sphere = box.getBoundingSphere(new THREE.Sphere());
             AppState.modelBoundingSphere = sphere;
 
             // Generate Tri-Planar Box UVs and apply bone material
-            AppState.footModel.traverse((child) => {
+            AppState.boneModel.traverse((child) => {
                 const mesh = child as THREE.Mesh;
                 if (mesh.isMesh && mesh.geometry) {
                     mesh.castShadow = true;
@@ -71,12 +127,11 @@ export function loadModel(): void {
                 }
             });
 
-            scene.add(AppState.footModel);
+            scene.add(AppState.boneModel);
 
             // Camera framing
             const radius = sphere.radius;
             const dist = radius * 2.0;
-            // Upright foot orientation: Y is UP, Z is length, X is width
             AppState.initialCameraPosition.set(dist * 0.65, dist * 0.45, dist * 0.85);
             AppState.initialCameraTarget.set(0, 0, 0);
 
@@ -87,28 +142,60 @@ export function loadModel(): void {
             controls.minDistance = radius * 0.2;
             controls.update();
 
-            // Load saved markers from LocalStorage and build 3D visual groups
-            loadMarkersFromLocalStorage();
-            syncSceneMarkers();
-
-            // Fade out loading screen
-            setTimeout(() => {
-                dom.loadingOverlay?.classList.add('fade-out');
-            }, 300);
+            boneLoaded = true;
+            checkAllLoaded();
         },
         (xhr) => {
-            const total = xhr.total > 0 ? xhr.total : estimatedTotalBytes;
-            const percent = Math.min(Math.round((xhr.loaded / total) * 100), 100);
+            boneBytesLoaded = xhr.loaded;
+            const percent = Math.min(Math.round((boneBytesLoaded / totalEstimatedBytes) * 100), 100);
             if (dom.progressBar) dom.progressBar.style.width = `${percent}%`;
             if (dom.progressPercent) dom.progressPercent.textContent = `${percent}%`;
-            const loadedMb = (xhr.loaded / (1024 * 1024)).toFixed(1);
-            const totalMb = (total / (1024 * 1024)).toFixed(1);
+            const loadedMb = (boneBytesLoaded / (1024 * 1024)).toFixed(1);
+            const totalMb = (totalEstimatedBytes / (1024 * 1024)).toFixed(1);
             if (dom.progressBytes) dom.progressBytes.textContent = `${loadedMb} MB / ${totalMb} MB`;
         },
         (error) => {
-            console.error('Error loading 3D model:', error);
+            console.error('Error loading bone 3D model:', error);
             showToast('Fehler beim Laden von bones_foot.glb', 'error');
-            if (dom.progressBytes) dom.progressBytes.textContent = 'Fehler beim Laden!';
+            if (dom.progressBytes) dom.progressBytes.textContent = 'Fehler beim Laden der Knochen!';
+        }
+    );
+
+    // 2. Load Skin Model
+    loader.load(
+        skinUrl,
+        (gltf) => {
+            AppState.skinModel = gltf.scene;
+
+            // Configure skin mesh material, normals, UVs, and shadows (matching right-foot anatomy)
+            AppState.skinModel.traverse((child) => {
+                const mesh = child as THREE.Mesh;
+                if (mesh.isMesh && mesh.geometry) {
+                    mesh.geometry.computeVertexNormals();
+                    generateBoxUVs(mesh.geometry, 0.12);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    mesh.material = AppState.useTexture ? skinMaterial : defaultSkinMaterial;
+                    const mat = mesh.material as THREE.MeshStandardMaterial;
+                    mat.wireframe = AppState.wireframeEnabled;
+                }
+            });
+
+            // Scale, rotate, and align skin model to envelop bones_foot seamlessly in the same virtual space
+            const skinScale = 9.2;
+            AppState.skinModel.scale.set(skinScale, skinScale, skinScale);
+            AppState.skinModel.rotation.y = -0.34;
+            AppState.skinModel.position.set(-18.15, -17.61, -39.94);
+            AppState.skinModel.updateMatrixWorld(true);
+
+            scene.add(AppState.skinModel);
+            skinLoaded = true;
+            checkAllLoaded();
+        },
+        undefined,
+        (error) => {
+            console.error('Error loading skin 3D model:', error);
+            showToast('Fehler beim Laden von skin_foot.glb', 'error');
         }
     );
 }
@@ -142,6 +229,34 @@ export function animate(time: number): void {
         const dotMesh = marker.dotMesh;
         if (!sprite) return;
 
+        const isCurrentView = (marker.view || 'bone') === AppState.activeView;
+
+        if (!isCurrentView) {
+            // GHOST MARKER: inactive view shines through gently inside the model
+            const targetScale = markerScale * 0.22;
+            const targetY = markerScale * 0.05;
+            const targetSpriteOpacity = 0.22;
+            const targetStemOpacity = 0.0;
+            const targetDotOpacity = 0.28;
+
+            const lerpFactor = 0.2;
+            sprite.scale.x += (targetScale - sprite.scale.x) * lerpFactor;
+            sprite.scale.y += (targetScale - sprite.scale.y) * lerpFactor;
+            sprite.position.y += (targetY - sprite.position.y) * lerpFactor;
+
+            sprite.material.opacity += (targetSpriteOpacity - sprite.material.opacity) * lerpFactor;
+            if (stemLine && !Array.isArray(stemLine.material)) {
+                const lineMat = stemLine.material as THREE.LineBasicMaterial;
+                lineMat.opacity += (targetStemOpacity - lineMat.opacity) * lerpFactor;
+            }
+            if (dotMesh && !Array.isArray(dotMesh.material)) {
+                const dotMat = dotMesh.material as THREE.MeshBasicMaterial;
+                dotMat.opacity += (targetDotOpacity - dotMat.opacity) * lerpFactor;
+            }
+            return;
+        }
+
+        // ACTIVE VIEW MARKER: interactive, hoverable, expandable
         const isSelected = (marker.id === AppState.selectedMarkerId);
         const isHovered = (marker.id === AppState.hoveredMarkerId);
         const isExpanded = isSelected || isHovered;
@@ -161,9 +276,6 @@ export function animate(time: number): void {
         }
         const targetY = isExpanded ? stemHeight : markerScale * 0.06;
 
-        // Target opacities:
-        // Occluded (behind foot): ~0.25 (idle dot) or ~0.45 (expanded/hovered)
-        // Visible (front of foot): 1.0
         let targetSpriteOpacity: number;
         if (isOccluded) {
             targetSpriteOpacity = isExpanded ? 0.45 : 0.25;
@@ -200,6 +312,7 @@ export function animate(time: number): void {
 
 // --- Application Bootstrap ---
 if (typeof window !== 'undefined') {
+    (window as any).AppState = AppState;
     onMarkersChanged(() => {
         updateSidebarList();
         updateMarkerCounts();
@@ -208,7 +321,8 @@ if (typeof window !== 'undefined') {
     initUI({
         selectMarker,
         syncSceneMarkers,
-        resetCameraView
+        resetCameraView,
+        switchView
     });
 
     setupInteractions();

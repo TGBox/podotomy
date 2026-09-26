@@ -6,6 +6,8 @@ export interface Vector3Like {
     z: number;
 }
 
+export type ModelViewType = 'bone' | 'skin';
+
 export interface AnnotationMarker {
     id: string;
     number: number;
@@ -14,6 +16,7 @@ export interface AnnotationMarker {
     position: Vector3Like;
     normal?: Vector3Like;
     createdAt: string;
+    view?: ModelViewType;
     threeGroup?: THREE.Group;
     sprite?: THREE.Sprite;
     stemLine?: THREE.Line;
@@ -37,9 +40,12 @@ export interface PendingHit {
 
 export interface AppStateInterface {
     mode: InteractionMode;
+    activeView: ModelViewType;
     markers: AnnotationMarker[];
     selectedMarkerId: string | null;
     hoveredMarkerId: string | null;
+    boneModel: THREE.Group | null;
+    skinModel: THREE.Group | null;
     footModel: THREE.Group | null;
     modelBoundingSphere: THREE.Sphere | null;
     initialCameraPosition: THREE.Vector3;
@@ -50,6 +56,7 @@ export interface AppStateInterface {
     wireframeEnabled: boolean;
     useTexture: boolean;
     textureScale: number;
+    skinTextureScale: number;
     modelScaleFactor: number;
     searchQuery: string;
     storageKey: string;
@@ -60,6 +67,7 @@ export interface ActionHandlers {
     selectMarker?: (id: string | null, smoothFly?: boolean) => void;
     syncSceneMarkers?: () => void;
     resetCameraView?: () => void;
+    switchView?: (view: ModelViewType) => void;
 }
 
 export interface ExportData {
@@ -74,5 +82,6 @@ export interface ExportData {
         position: Vector3Like;
         normal?: Vector3Like;
         createdAt: string;
+        view?: ModelViewType;
     }>;
 }
