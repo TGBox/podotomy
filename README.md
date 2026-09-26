@@ -25,7 +25,7 @@
 
 ## Funktionsübersicht
 
-- **Echtes 3D-Knochenmodell:** Laden des hochauflösenden anatomischen 38,7 MB GLTF-Modells (`Full_Foot.glb`).
+- **Echtes 3D-Knochenmodell:** Laden des hochauflösenden anatomischen 38,7 MB GLTF-Modells (`bones_foot.glb`).
 - **PBR-Materialien & Texturskalierung:** Realistisches Rendering mit Albedo-, Normal-, Roughness- und Ambient-Occlusion-Maps sowie Tri-Planarer UV-Projektion.
 - **Punktbasierte Markierungen:** Einfaches Platzieren von nummerierten Markierungen inklusive Titel und Notizen per Mausklick auf die Knochenoberfläche.
 - **Intelligente Badges:**
@@ -70,7 +70,7 @@ podotomy/
 │   │   └── ui.test.ts          # Tests für DOM-Rendering, Sidebar, Filter und Modale
 │   └── e2e/                    # Playwright End-to-End Browser-Tests
 │       └── app.spec.ts         # Komplette E2E-Workflows im echten Chromium-Browser
-├── Full_Foot.glb               # 3D-GLTF-Fußmodell (zentriert, aufrecht orientiert)
+├── bones_foot.glb               # 3D-GLTF-Fußmodell (zentriert, aufrecht orientiert)
 ├── index.html                  # HTML5-Gerüst mit Vite-Einstiegspunkt
 ├── package.json                # npm Abhängigkeiten, Skripte & Metadaten
 ├── playwright.config.ts        # Playwright E2E-Konfiguration
@@ -164,7 +164,7 @@ npm run test:e2e
 
 ### Koordinatensystem & Ausrichtung
 
-Das Knochenmodell `Full_Foot.glb` ist nach orthopädischen und medizinischen Konventionen ausgerichtet:
+Das Knochenmodell `bones_foot.glb` ist nach orthopädischen und medizinischen Konventionen ausgerichtet:
 
 - **Y-Achse (Höhe):** Zeigt nach **oben** entlang des Schienbeins (Tibia).
 - **Z-Achse (Länge):** Verläuft in Längsrichtung von der Ferse (Calcaneus) bis zu den Zehenspitzen (Phalangen).

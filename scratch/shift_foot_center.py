@@ -1,7 +1,7 @@
 import struct
 import json
 
-input_path = 'Full_Foot.glb'
+input_path = 'bones_foot.glb'
 
 with open(input_path, 'rb') as f:
     header = f.read(12)
@@ -70,4 +70,4 @@ with open(input_path, 'wb') as f:
     f.write(struct.pack('<II', len(bin_bytes), bin_type))
     f.write(bin_bytes)
 
-print("Full_Foot.glb updated successfully!")
+print("bones_foot.glb updated successfully!")

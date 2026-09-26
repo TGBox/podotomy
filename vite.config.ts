@@ -8,8 +8,8 @@ function copyStaticAssets() {
     closeBundle() {
       const dist = path.resolve(__dirname, 'dist');
       if (fs.existsSync(dist)) {
-        const glbSrc = path.resolve(__dirname, 'Full_Foot.glb');
-        const glbDest = path.resolve(dist, 'Full_Foot.glb');
+        const glbSrc = path.resolve(__dirname, 'bones_foot.glb');
+        const glbDest = path.resolve(dist, 'bones_foot.glb');
         if (fs.existsSync(glbSrc)) {
           fs.copyFileSync(glbSrc, glbDest);
         }
@@ -17,6 +17,11 @@ function copyStaticAssets() {
         const texDest = path.resolve(dist, 'bone-texture');
         if (fs.existsSync(texSrc)) {
           fs.cpSync(texSrc, texDest, { recursive: true });
+        }
+        const skinSrc = path.resolve(__dirname, 'skin-texture');
+        const skinDest = path.resolve(dist, 'skin-texture');
+        if (fs.existsSync(skinSrc)) {
+          fs.cpSync(skinSrc, skinDest, { recursive: true });
         }
       }
     }
@@ -33,6 +38,11 @@ export default defineConfig({
         '**/dist/**',
         '**/example_nodes/**',
         '**/*.glb',
+        '**/*.png',
+        '**/*.jpg',
+        '**/*.jpeg',
+        '**/skin_*/**',
+        '**/bone-texture/**',
         '**/test-results/**',
         '**/playwright-report/**'
       ]

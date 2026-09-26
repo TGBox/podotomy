@@ -35,12 +35,12 @@ export function getFootCentroid(model: THREE.Object3D): THREE.Vector3 {
 }
 
 /**
- * Loads Full_Foot.glb, centers the model, generates UVs, frames camera, and loads markers
+ * Loads bones_foot.glb, centers the model, generates UVs, frames camera, and loads markers
  */
 export function loadModel(): void {
     const loader = new GLTFLoader();
     const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/$/, '') : '';
-    const modelUrl = `${base}/Full_Foot.glb`;
+    const modelUrl = `${base}/bones_foot.glb`;
     const estimatedTotalBytes = 40605948; // ~38.7 MB
 
     loader.load(
@@ -107,7 +107,7 @@ export function loadModel(): void {
         },
         (error) => {
             console.error('Error loading 3D model:', error);
-            showToast('Fehler beim Laden von Full_Foot.glb', 'error');
+            showToast('Fehler beim Laden von bones_foot.glb', 'error');
             if (dom.progressBytes) dom.progressBytes.textContent = 'Fehler beim Laden!';
         }
     );

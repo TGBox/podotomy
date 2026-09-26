@@ -1,6 +1,6 @@
 import struct, json
 
-with open('Full_Foot.glb', 'rb') as f:
+with open('bones_foot.glb', 'rb') as f:
     f.read(12)
     l, t = struct.unpack('<II', f.read(8))
     j = json.loads(f.read(l).decode('utf-8'))

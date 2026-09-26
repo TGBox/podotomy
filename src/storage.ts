@@ -73,7 +73,7 @@ export function exportMarkersJSON(): boolean {
     }
 
     const cleanData: ExportData = {
-        model: 'Full_Foot.glb',
+        model: 'bones_foot.glb',
         exportedAt: new Date().toISOString(),
         markersCount: AppState.markers.length,
         annotations: AppState.markers.map(({ id, number, title, description, position, normal, createdAt }) => ({

@@ -28,7 +28,7 @@ test.describe('Podotomy 3D E2E Tests', () => {
         });
 
         await page.goto('/');
-        // Wait for page to initialize and loading overlay to finish (Full_Foot.glb 38.7 MB)
+        // Wait for page to initialize and loading overlay to finish (bones_foot.glb 38.7 MB)
         await page.waitForSelector('#loading-overlay.fade-out', { timeout: 45000 });
     });
 
