@@ -6,20 +6,20 @@ const textureLoader = new THREE.TextureLoader();
 const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/$/, '') : '';
 
 // --- PBR Texture Maps ---
-export const boneAlbedoMap = textureLoader.load(`${base}/bone-texture/bone_albedo.png`);
+export const boneAlbedoMap = textureLoader.load(`${base}/textures/bone/bone_albedo.png`);
 boneAlbedoMap.colorSpace = THREE.SRGBColorSpace;
 boneAlbedoMap.wrapS = THREE.RepeatWrapping;
 boneAlbedoMap.wrapT = THREE.RepeatWrapping;
 
-export const boneNormalMap = textureLoader.load(`${base}/bone-texture/bone_normal-ogl.png`);
+export const boneNormalMap = textureLoader.load(`${base}/textures/bone/bone_normal-ogl.png`);
 boneNormalMap.wrapS = THREE.RepeatWrapping;
 boneNormalMap.wrapT = THREE.RepeatWrapping;
 
-export const boneRoughnessMap = textureLoader.load(`${base}/bone-texture/bone_roughness.png`);
+export const boneRoughnessMap = textureLoader.load(`${base}/textures/bone/bone_roughness.png`);
 boneRoughnessMap.wrapS = THREE.RepeatWrapping;
 boneRoughnessMap.wrapT = THREE.RepeatWrapping;
 
-export const boneAoMap = textureLoader.load(`${base}/bone-texture/bone_ao.png`);
+export const boneAoMap = textureLoader.load(`${base}/textures/bone/bone_ao.png`);
 boneAoMap.wrapS = THREE.RepeatWrapping;
 boneAoMap.wrapT = THREE.RepeatWrapping;
 
@@ -37,20 +37,20 @@ export const boneMaterial = new THREE.MeshStandardMaterial({
 });
 
 // --- Skin PBR Texture Maps ---
-export const skinAlbedoMap = textureLoader.load(`${base}/skin-texture/skin_0001_color_2k.jpg`);
+export const skinAlbedoMap = textureLoader.load(`${base}/textures/skin/skin_0001_color_2k.jpg`);
 skinAlbedoMap.colorSpace = THREE.SRGBColorSpace;
 skinAlbedoMap.wrapS = THREE.RepeatWrapping;
 skinAlbedoMap.wrapT = THREE.RepeatWrapping;
 
-export const skinNormalMap = textureLoader.load(`${base}/skin-texture/skin_0001_normal_directx_2k.png`);
+export const skinNormalMap = textureLoader.load(`${base}/textures/skin/skin_0001_normal_directx_2k.png`);
 skinNormalMap.wrapS = THREE.RepeatWrapping;
 skinNormalMap.wrapT = THREE.RepeatWrapping;
 
-export const skinRoughnessMap = textureLoader.load(`${base}/skin-texture/skin_0001_roughness_2k.jpg`);
+export const skinRoughnessMap = textureLoader.load(`${base}/textures/skin/skin_0001_roughness_2k.jpg`);
 skinRoughnessMap.wrapS = THREE.RepeatWrapping;
 skinRoughnessMap.wrapT = THREE.RepeatWrapping;
 
-export const skinAoMap = textureLoader.load(`${base}/skin-texture/skin_0001_ao_2k.jpg`);
+export const skinAoMap = textureLoader.load(`${base}/textures/skin/skin_0001_ao_2k.jpg`);
 skinAoMap.wrapS = THREE.RepeatWrapping;
 skinAoMap.wrapT = THREE.RepeatWrapping;
 

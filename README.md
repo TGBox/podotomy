@@ -46,13 +46,19 @@ Das Projekt nutzt modernstes **TypeScript** zusammen mit **Vite** als performant
 
 ```txt
 podotomy/
-├── bone-texture/               # PBR-Texturdateien (Albedo, Normal, Roughness, AO)
+├── public/                     # Statische Vite-Assets (automatische Bereitstellung & Build)
+│   ├── models/                 # 3D-GLTF-Modelle
+│   │   ├── bones_foot.glb      # Knochenskelett (zentriert, aufrecht orientiert)
+│   │   └── skin_foot.glb       # Haut- & Weichteilmodell (angepasst, 2K-Normalen)
+│   └── textures/               # PBR-Texturmaps
+│       ├── bone/               # Knochentexturen (Albedo, Normal, Roughness, AO)
+│       └── skin/               # Hauttexturen (Color, Normal DirectX, Roughness, AO)
 ├── src/                        # Modulare TypeScript-Anwendungsarchitektur
 │   ├── camera.ts               # Kamera-Flug- & Reset-Animationen (Easing, Orbit)
 │   ├── interactions.ts         # Raycasting, Maus-Events (Hover/Click), Marker-Selektion
 │   ├── main.ts                 # Haupteinstiegspunkt, GLTF-Lader & 60-FPS-Renderloop
 │   ├── markers.ts              # 3D-Marker-Visuals, Canvas-Badge-Texturen, Okklusionsprüfung
-│   ├── materials.ts            # PBR-Knochenmaterial, Tri-Planare Box-UV-Generierung
+│   ├── materials.ts            # PBR-Materialien (Knochen & Haut), Tri-Planare Box-UV-Generierung
 │   ├── scene.ts                # Three.js Grundgerüst (Scene, Camera, Renderer, Lights)
 │   ├── state.ts                # Zentrales reaktives App-State-Objekt (AppState)
 │   ├── storage.ts              # LocalStorage-Serialisierung & JSON-Im-/Export
@@ -62,6 +68,7 @@ podotomy/
 │   ├── setup.ts                # Test-Environment Setup (2D Canvas- & WebGL-Mocks)
 │   ├── unit/                   # Vitest Unit- und Integrations-Tests
 │   │   ├── camera.test.ts      # Tests für Kamerafahrten, Berechnungen und Reset
+│   │   ├── dual_view.test.ts   # Tests für Dual-View Modus & Marker-Trennung
 │   │   ├── interactions.test.ts# Tests für Interaktionsmodi und Raycast-Handling
 │   │   ├── markers.test.ts     # Tests für Canvas-Badges, Skalierung und Okklusion
 │   │   ├── materials.test.ts   # Tests für PBR-Materialien und Box-UVs
@@ -69,8 +76,8 @@ podotomy/
 │   │   ├── storage.test.ts     # Tests für LocalStorage, Migration und JSON-Im-/Export
 │   │   └── ui.test.ts          # Tests für DOM-Rendering, Sidebar, Filter und Modale
 │   └── e2e/                    # Playwright End-to-End Browser-Tests
-│       └── app.spec.ts         # Komplette E2E-Workflows im echten Chromium-Browser
-├── bones_foot.glb               # 3D-GLTF-Fußmodell (zentriert, aufrecht orientiert)
+│       ├── app.spec.ts         # Komplette E2E-Workflows im echten Chromium-Browser
+│       └── dual_view.spec.ts   # E2E-Tests für Dual-View Umschaltung & Hautbeschriftung
 ├── index.html                  # HTML5-Gerüst mit Vite-Einstiegspunkt
 ├── package.json                # npm Abhängigkeiten, Skripte & Metadaten
 ├── playwright.config.ts        # Playwright E2E-Konfiguration
@@ -188,12 +195,21 @@ Da medizinische Roh-Scans meist keine UV-Koordinaten besitzen, projiziert `gener
 
 ### PBR-Knochenmaterial
 
-Unter `bone-texture/` liegen 2048x2048 PBR-Texturen:
+Unter `public/textures/bone/` liegen 2048x2048 PBR-Texturen:
 
 - `bone_albedo.png` (Farb- und Knochenstruktur)
 - `bone_normal-ogl.png` (Mikrorelief und Poren)
 - `bone_roughness.png` (Lichtstreuung matter Knochenbereiche)
 - `bone_ao.png` (Tiefenschatten in Gelenkspalten)
+
+### PBR-Hautmaterial
+
+Unter `public/textures/skin/` liegen optimierte 2K PBR-Texturen:
+
+- `skin_0001_color_2k.jpg` (Farb- und Hauttöne)
+- `skin_0001_normal_directx_2k.png` (Mikro-Poren- und Hautfaltenrelief)
+- `skin_0001_roughness_2k.jpg` (Lichtstreuung)
+- `skin_0001_ao_2k.jpg` (Tiefenverschattung)
 
 ---
 

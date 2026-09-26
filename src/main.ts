@@ -75,8 +75,8 @@ export function switchView(newView: ModelViewType): void {
 export function loadModel(): void {
     const loader = new GLTFLoader();
     const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/$/, '') : '';
-    const boneUrl = `${base}/bones_foot.glb`;
-    const skinUrl = `${base}/skin_foot.glb`;
+    const boneUrl = `${base}/models/bones_foot.glb`;
+    const skinUrl = `${base}/models/skin_foot.glb`;
 
     let boneLoaded = false;
     let skinLoaded = false;
