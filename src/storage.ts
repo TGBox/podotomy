@@ -16,52 +16,17 @@ export function saveMarkersToLocalStorage(): void {
 }
 
 /**
- * Loads persisted markers from LocalStorage (with legacy v1 schema migration)
+ * Loads persisted markers from LocalStorage
  */
 export function loadMarkersFromLocalStorage(): void {
     try {
-        let raw = localStorage.getItem('podotomy_foot_annotations_v2');
+        const raw = localStorage.getItem(AppState.storageKey);
         if (raw) {
             const parsed: AnnotationMarker[] = JSON.parse(raw);
             parsed.forEach(m => {
                 if (!m.view) m.view = 'bone';
             });
             AppState.markers = parsed;
-            return;
-        }
-
-        // Migrate from v1 if present
-        raw = localStorage.getItem('podotomy_foot_annotations_v1');
-        if (raw) {
-            const v1Markers: AnnotationMarker[] = JSON.parse(raw);
-            v1Markers.forEach(m => {
-                m.view = 'bone';
-                if (m.position) {
-                    if (m.position.x < -35 && m.position.y < -35) {
-                        m.position.x += 106.843;
-                        m.position.y += 130.002;
-                        m.position.z -= 5.246;
-                    }
-                    // Rotate -90 around X: x' = x, y' = z, z' = -y
-                    const ox = m.position.x;
-                    const oy = m.position.y;
-                    const oz = m.position.z;
-                    m.position.x = ox;
-                    m.position.y = oz;
-                    m.position.z = -oy;
-
-                    if (m.normal) {
-                        const nx = m.normal.x || 0;
-                        const ny = m.normal.y || 1;
-                        const nz = m.normal.z || 0;
-                        m.normal.x = nx;
-                        m.normal.y = nz;
-                        m.normal.z = -ny;
-                    }
-                }
-            });
-            AppState.markers = v1Markers;
-            saveMarkersToLocalStorage();
         }
     } catch (err) {
         console.warn('LocalStorage load failed:', err);

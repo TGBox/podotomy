@@ -3,6 +3,7 @@ import { camera, markersGroup } from './scene.js';
 import { AppState } from './state.js';
 import { saveMarkersToLocalStorage } from './storage.js';
 import type { AnnotationMarker, ModelViewType } from './types.js';
+import { updateSidebarList, updateMarkerCounts } from './ui.js';
 
 // --- Marker Canvas Generators ---
 
@@ -363,17 +364,6 @@ export function updateMarkerOcclusion(): void {
     }
 }
 
-// Event listener callback registry for scene sync events
-const onMarkersChangedCallbacks: Array<() => void> = [];
-
-/**
- * Registers a callback invoked whenever markers are synced or updated
- */
-export function onMarkersChanged(cb: () => void): void {
-    if (typeof cb === 'function') {
-        onMarkersChangedCallbacks.push(cb);
-    }
-}
 
 /**
  * Rebuilds all 3D markers from AppState.markers
@@ -423,13 +413,6 @@ export function syncSceneMarkers(): void {
     });
 
     saveMarkersToLocalStorage();
-
-    // Notify registered UI listeners
-    onMarkersChangedCallbacks.forEach(cb => {
-        try {
-            cb();
-        } catch (e) {
-            console.error('Marker sync callback error:', e);
-        }
-    });
+    updateSidebarList();
+    updateMarkerCounts();
 }

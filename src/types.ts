@@ -57,7 +57,6 @@ export interface AppStateInterface {
     useTexture: boolean;
     textureScale: number;
     skinTextureScale: number;
-    modelScaleFactor: number;
     searchQuery: string;
     storageKey: string;
     interactiveMarkerObjects: THREE.Object3D[];

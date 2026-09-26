@@ -5,62 +5,26 @@ import { boneMaterial, defaultMaterial, updateTextureScale, skinMaterial, defaul
 import { exportMarkersJSON, importMarkersJSON } from './storage.js';
 import type { ActionHandlers, InteractionMode, AnnotationMarker } from './types.js';
 
-// --- Cached DOM Element References ---
-export const dom = {
-    get canvasContainer() { return document.getElementById('canvas-container') as HTMLElement; },
-    get viewBoneBtn() { return document.getElementById('view-bone-btn') as HTMLButtonElement; },
-    get viewSkinBtn() { return document.getElementById('view-skin-btn') as HTMLButtonElement; },
-    get modeNavBtn() { return document.getElementById('mode-nav-btn') as HTMLButtonElement; },
-    get modeAddBtn() { return document.getElementById('mode-add-btn') as HTMLButtonElement; },
-    get modeBanner() { return document.getElementById('mode-banner') as HTMLElement; },
-    get sidebar() { return document.getElementById('sidebar') as HTMLElement; },
-    get toggleSidebarBtn() { return document.getElementById('toggle-sidebar-btn') as HTMLButtonElement; },
-    get closeSidebarBtn() { return document.getElementById('close-sidebar-btn') as HTMLButtonElement; },
-    get optionsDrawer() { return document.getElementById('options-drawer') as HTMLElement; },
-    get toggleOptionsBtn() { return document.getElementById('toggle-options-btn') as HTMLButtonElement; },
-    get closeOptionsBtn() { return document.getElementById('close-options-btn') as HTMLButtonElement; },
-    get resetViewBtn() { return document.getElementById('reset-view-btn') as HTMLButtonElement; },
-    get markersList() { return document.getElementById('markers-list') as HTMLElement; },
-    get markerCountBadge() { return document.getElementById('marker-count-badge') as HTMLElement; },
-    get sidebarCountPill() { return document.getElementById('sidebar-count-pill') as HTMLElement; },
-    get searchInput() { return document.getElementById('search-input') as HTMLInputElement; },
-    get exportBtn() { return document.getElementById('export-json-btn') as HTMLButtonElement; },
-    get importBtn() { return document.getElementById('import-json-btn') as HTMLButtonElement; },
-    get importFileInput() { return document.getElementById('import-file-input') as HTMLInputElement; },
-    get clearAllBtn() { return document.getElementById('clear-all-btn') as HTMLButtonElement; },
-    get floatingTooltip() { return document.getElementById('floating-tooltip') as HTMLElement; },
-    get tooltipBadge() { return document.getElementById('tooltip-badge') as HTMLElement; },
-    get tooltipTitle() { return document.getElementById('tooltip-title') as HTMLElement; },
-    get tooltipDesc() { return document.getElementById('tooltip-desc') as HTMLElement; },
-    get tooltipCloseBtn() { return document.getElementById('tooltip-close') as HTMLButtonElement; },
-    get tooltipFocusBtn() { return document.getElementById('tooltip-focus-btn') as HTMLButtonElement; },
-    get tooltipEditBtn() { return document.getElementById('tooltip-edit-btn') as HTMLButtonElement; },
-    get tooltipDeleteBtn() { return document.getElementById('tooltip-delete-btn') as HTMLButtonElement; },
-    get modalAdd() { return document.getElementById('modal-add') as HTMLDialogElement; },
-    get modalAddForm() { return document.getElementById('modal-add-form') as HTMLFormElement; },
-    get inputTitle() { return document.getElementById('input-title') as HTMLInputElement; },
-    get inputDesc() { return document.getElementById('input-desc') as HTMLTextAreaElement; },
-    get cancelAddBtn() { return document.getElementById('cancel-add-btn') as HTMLButtonElement; },
-    get modalEdit() { return document.getElementById('modal-edit') as HTMLDialogElement; },
-    get modalEditForm() { return document.getElementById('modal-edit-form') as HTMLFormElement; },
-    get editIdInput() { return document.getElementById('edit-marker-id') as HTMLInputElement; },
-    get editTitleInput() { return document.getElementById('edit-title') as HTMLInputElement; },
-    get editDescInput() { return document.getElementById('edit-desc') as HTMLTextAreaElement; },
-    get cancelEditBtn() { return document.getElementById('cancel-edit-btn') as HTMLButtonElement; },
-    get textureToggle() { return document.getElementById('texture-toggle') as HTMLInputElement; },
-    get textureScaleSlider() { return document.getElementById('texture-scale-slider') as HTMLInputElement; },
-    get texScaleValSpan() { return document.getElementById('tex-scale-val') as HTMLElement; },
-    get wireframeToggle() { return document.getElementById('wireframe-toggle') as HTMLInputElement; },
-    get ambientLightSlider() { return document.getElementById('ambient-light-slider') as HTMLInputElement; },
-    get ambientValSpan() { return document.getElementById('ambient-val') as HTMLElement; },
-    get dirLightSlider() { return document.getElementById('dir-light-slider') as HTMLInputElement; },
-    get dirValSpan() { return document.getElementById('dir-val') as HTMLElement; },
-    get themeChips() { return document.querySelectorAll('.theme-chip'); },
-    get loadingOverlay() { return document.getElementById('loading-overlay') as HTMLElement; },
-    get progressBar() { return document.getElementById('progress-bar') as HTMLElement; },
-    get progressPercent() { return document.getElementById('progress-percent') as HTMLElement; },
-    get progressBytes() { return document.getElementById('progress-bytes') as HTMLElement; }
+// --- DOM Element References ---
+const elementOverrides: Record<string, string> = {
+    exportBtn: 'export-json-btn',
+    importBtn: 'import-json-btn',
+    tooltipCloseBtn: 'tooltip-close',
+    editIdInput: 'edit-marker-id'
 };
+
+const toKebab = (str: string) => str.replace(/([A-Z])/g, '-$1').toLowerCase();
+
+type AnyDomElement = HTMLElement & HTMLInputElement & HTMLDialogElement & HTMLButtonElement;
+
+export const dom = new Proxy({} as Record<string, AnyDomElement> & { themeChips: NodeListOf<Element> }, {
+    get: (_, key: string) => {
+        if (typeof document === 'undefined') return null;
+        if (key === 'themeChips') return document.querySelectorAll('.theme-chip');
+        const id = elementOverrides[key] || toKebab(key);
+        return document.getElementById(id);
+    }
+});
 
 // Callback handlers configured by main application
 let actions: ActionHandlers = {
@@ -74,9 +38,7 @@ let actions: ActionHandlers = {
  * Escapes HTML characters for safe template rendering
  */
 export function escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return text.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] || c);
 }
 
 /**

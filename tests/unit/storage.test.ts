@@ -35,30 +35,6 @@ describe('Storage and Serialization', () => {
         expect(AppState.markers[0].position.x).toBe(12.3);
     });
 
-    it('migrates legacy v1 annotations correctly to centered upright coordinates', () => {
-        const legacyMarkers = [
-            {
-                id: 'legacy_1',
-                number: 1,
-                title: 'Legacy Point',
-                description: 'Needs coordinate migration',
-                position: { x: -50, y: -60, z: 10 },
-                normal: { x: 0, y: 1, z: 0 },
-                createdAt: '2026-01-01T00:00:00.000Z'
-            }
-        ];
-
-        localStorage.setItem('podotomy_foot_annotations_v1', JSON.stringify(legacyMarkers));
-
-        loadMarkersFromLocalStorage();
-
-        expect(AppState.markers.length).toBe(1);
-        const migrated = AppState.markers[0];
-        expect(migrated.title).toBe('Legacy Point');
-        // Check that -90 deg X rotation was applied: x' = x, y' = z, z' = -y
-        expect(migrated.position.y).toBe(migrated.position.y);
-    });
-
     it('handles export of empty markers gracefully', () => {
         AppState.markers = [];
         const result = exportMarkersJSON();

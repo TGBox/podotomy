@@ -23,25 +23,10 @@ export const AppState: AppStateInterface = {
     useTexture: true,
     textureScale: 1.0,
     skinTextureScale: 1.0,
-    modelScaleFactor: 1.0,
     searchQuery: '',
     storageKey: 'podotomy_foot_annotations_v2',
     interactiveMarkerObjects: []
 };
-
-/**
- * Returns markers associated with the currently active view ('bone' or 'skin')
- */
-export function getActiveMarkers(): AnnotationMarker[] {
-    return AppState.markers.filter(m => (m.view || 'bone') === AppState.activeView);
-}
-
-/**
- * Returns markers associated with the inactive view
- */
-export function getInactiveMarkers(): AnnotationMarker[] {
-    return AppState.markers.filter(m => (m.view || 'bone') !== AppState.activeView);
-}
 
 /**
  * Returns the currently selected marker object if any

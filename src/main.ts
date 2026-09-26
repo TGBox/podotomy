@@ -9,10 +9,10 @@ import {
     defaultSkinMaterial,
     generateBoxUVs
 } from './materials.js';
-import { syncSceneMarkers, updateMarkerOcclusion, onMarkersChanged } from './markers.js';
+import { syncSceneMarkers, updateMarkerOcclusion } from './markers.js';
 import { resetCameraView } from './camera.js';
 import { loadMarkersFromLocalStorage } from './storage.js';
-import { dom, initUI, updateSidebarList, updateMarkerCounts, showToast } from './ui.js';
+import { dom, initUI, showToast } from './ui.js';
 import { setupInteractions, selectMarker, updateFloatingTooltipPosition } from './interactions.js';
 import type { ModelViewType } from './types.js';
 
@@ -313,10 +313,6 @@ export function animate(time: number): void {
 // --- Application Bootstrap ---
 if (typeof window !== 'undefined') {
     (window as any).AppState = AppState;
-    onMarkersChanged(() => {
-        updateSidebarList();
-        updateMarkerCounts();
-    });
 
     initUI({
         selectMarker,

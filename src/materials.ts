@@ -82,13 +82,11 @@ export const defaultSkinMaterial = new THREE.MeshStandardMaterial({
     wireframe: false
 });
 
-/**
- * Updates the UV repeat scale factor for all bone texture maps
- * @param scaleFactor Multiplier for texture tiling
- */
-export function updateTextureScale(scaleFactor: number): void {
-    AppState.textureScale = scaleFactor;
-    [boneAlbedoMap, boneNormalMap, boneRoughnessMap, boneAoMap].forEach(tex => {
+const boneMaps = [boneAlbedoMap, boneNormalMap, boneRoughnessMap, boneAoMap];
+const skinMaps = [skinAlbedoMap, skinNormalMap, skinRoughnessMap, skinAoMap];
+
+function setTextureRepeat(maps: THREE.Texture[], scaleFactor: number): void {
+    maps.forEach(tex => {
         if (tex) {
             tex.repeat.set(scaleFactor, scaleFactor);
             tex.needsUpdate = true;
@@ -97,17 +95,19 @@ export function updateTextureScale(scaleFactor: number): void {
 }
 
 /**
+ * Updates the UV repeat scale factor for all bone texture maps
+ */
+export function updateTextureScale(scaleFactor: number): void {
+    AppState.textureScale = scaleFactor;
+    setTextureRepeat(boneMaps, scaleFactor);
+}
+
+/**
  * Updates the UV repeat scale factor for all skin texture maps
- * @param scaleFactor Multiplier for texture tiling
  */
 export function updateSkinTextureScale(scaleFactor: number): void {
     AppState.skinTextureScale = scaleFactor;
-    [skinAlbedoMap, skinNormalMap, skinRoughnessMap, skinAoMap].forEach(tex => {
-        if (tex) {
-            tex.repeat.set(scaleFactor, scaleFactor);
-            tex.needsUpdate = true;
-        }
-    });
+    setTextureRepeat(skinMaps, scaleFactor);
 }
 
 /**
