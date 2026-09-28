@@ -233,6 +233,8 @@ export function createMarkerVisual(markerData: AnnotationMarker): { group: THREE
 
     markerData.badgeTexture = badgeTex;
     markerData.dotTexture = dotTex;
+    // Keep references on the group so both textures can be disposed even if the marker was removed from state
+    group.userData.textures = [badgeTex, dotTex];
 
     const isInitiallySelected = isCurrentView && (markerData.id === AppState.selectedMarkerId);
 
@@ -318,6 +320,13 @@ const _lastCamPos = new THREE.Vector3();
 const _lastCamRot = new THREE.Quaternion();
 
 /**
+ * Invalidates the camera cache so the next updateMarkerOcclusion() call recomputes all markers
+ */
+export function invalidateMarkerOcclusion(): void {
+    _lastCamPos.set(NaN, NaN, NaN);
+}
+
+/**
  * Real-time analytical occlusion test based on surface normal vectors
  */
 export function updateMarkerOcclusion(): void {
@@ -376,11 +385,12 @@ export function syncSceneMarkers(): void {
             const mesh = obj as THREE.Mesh;
             if (mesh.geometry) mesh.geometry.dispose();
             if (mesh.material) {
-                const mat = mesh.material as THREE.Material & { map?: THREE.Texture };
-                if (mat.map) mat.map.dispose();
-                mat.dispose();
+                (mesh.material as THREE.Material).dispose();
             }
         });
+        // Dispose BOTH canvas textures (badge + dot), not only the one currently mapped on the sprite
+        const textures = (child.userData?.textures ?? []) as THREE.Texture[];
+        textures.forEach(tex => tex.dispose());
         markersGroup.remove(child);
     }
 
@@ -411,6 +421,9 @@ export function syncSceneMarkers(): void {
             }
         });
     });
+
+    // Force occlusion re-evaluation on the next frame (new visuals start with isOccluded = false)
+    invalidateMarkerOcclusion();
 
     saveMarkersToLocalStorage();
     updateSidebarList();

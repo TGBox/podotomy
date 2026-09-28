@@ -6,20 +6,20 @@ const textureLoader = new THREE.TextureLoader();
 const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/$/, '') : '';
 
 // --- PBR Texture Maps ---
-export const boneAlbedoMap = textureLoader.load(`${base}/textures/bone/bone_albedo.png`);
+export const boneAlbedoMap = textureLoader.load(`${base}/textures/bone/bone_albedo.jpg`);
 boneAlbedoMap.colorSpace = THREE.SRGBColorSpace;
 boneAlbedoMap.wrapS = THREE.RepeatWrapping;
 boneAlbedoMap.wrapT = THREE.RepeatWrapping;
 
-export const boneNormalMap = textureLoader.load(`${base}/textures/bone/bone_normal-ogl.png`);
+export const boneNormalMap = textureLoader.load(`${base}/textures/bone/bone_normal-ogl.jpg`);
 boneNormalMap.wrapS = THREE.RepeatWrapping;
 boneNormalMap.wrapT = THREE.RepeatWrapping;
 
-export const boneRoughnessMap = textureLoader.load(`${base}/textures/bone/bone_roughness.png`);
+export const boneRoughnessMap = textureLoader.load(`${base}/textures/bone/bone_roughness.jpg`);
 boneRoughnessMap.wrapS = THREE.RepeatWrapping;
 boneRoughnessMap.wrapT = THREE.RepeatWrapping;
 
-export const boneAoMap = textureLoader.load(`${base}/textures/bone/bone_ao.png`);
+export const boneAoMap = textureLoader.load(`${base}/textures/bone/bone_ao.jpg`);
 boneAoMap.wrapS = THREE.RepeatWrapping;
 boneAoMap.wrapT = THREE.RepeatWrapping;
 
@@ -42,7 +42,7 @@ skinAlbedoMap.colorSpace = THREE.SRGBColorSpace;
 skinAlbedoMap.wrapS = THREE.RepeatWrapping;
 skinAlbedoMap.wrapT = THREE.RepeatWrapping;
 
-export const skinNormalMap = textureLoader.load(`${base}/textures/skin/skin_0001_normal_directx_2k.png`);
+export const skinNormalMap = textureLoader.load(`${base}/textures/skin/skin_0001_normal_directx_2k.jpg`);
 skinNormalMap.wrapS = THREE.RepeatWrapping;
 skinNormalMap.wrapT = THREE.RepeatWrapping;
 
@@ -58,7 +58,7 @@ skinAoMap.wrapT = THREE.RepeatWrapping;
 export const skinMaterial = new THREE.MeshStandardMaterial({
     map: skinAlbedoMap,
     normalMap: skinNormalMap,
-    normalScale: new THREE.Vector2(0.85, 0.85),
+    normalScale: new THREE.Vector2(0.85, -0.85), // DirectX normal map: invert Y for OpenGL convention
     roughnessMap: skinRoughnessMap,
     roughness: 0.65,
     metalness: 0.02,

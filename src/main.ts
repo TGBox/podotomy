@@ -81,7 +81,7 @@ export function loadModel(): void {
     let boneLoaded = false;
     let skinLoaded = false;
     let boneBytesLoaded = 0;
-    const totalEstimatedBytes = 40605948 + 2923652; // ~43.5 MB
+    const totalEstimatedBytes = 13519952 + 2923652; // ~16.4 MB (bones_foot.glb indexed/welded)
 
     function checkAllLoaded(): void {
         if (!boneLoaded || !skinLoaded) return;

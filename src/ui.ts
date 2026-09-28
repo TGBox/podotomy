@@ -192,7 +192,7 @@ export function updateSidebarList(): void {
         } else {
             dom.markersList.innerHTML = `
                 <div class="empty-state">
-                    <p>Keine Markierungen für <em>"${query}"</em> gefunden.</p>
+                    <p>Keine Markierungen für <em>"${escapeHtml(query)}"</em> gefunden.</p>
                 </div>
             `;
         }

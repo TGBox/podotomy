@@ -8,6 +8,18 @@ import { dom, updateSidebarCardHighlight, openAddModal, showToast } from './ui.j
 export const raycaster = new THREE.Raycaster();
 export const mouse = new THREE.Vector2();
 
+const _normalMatrix = new THREE.Matrix3();
+
+/**
+ * Converts the hit face normal from object-local space into world space
+ * (required for rotated/scaled models such as the skin mesh)
+ */
+export function getWorldHitNormal(hit: THREE.Intersection): THREE.Vector3 | null {
+    if (!hit.face) return null;
+    _normalMatrix.getNormalMatrix(hit.object.matrixWorld);
+    return hit.face.normal.clone().applyMatrix3(_normalMatrix).normalize();
+}
+
 /**
  * Selects an annotation marker, opens its floating tooltip, highlights sidebar, and flies camera
  */
@@ -235,7 +247,7 @@ export function setupInteractions(): void {
                     // Open Add Marker Modal
                     AppState.pendingHit = {
                         point: hit.point.clone(),
-                        normal: hit.face ? hit.face.normal.clone() : new THREE.Vector3(0, 1, 0)
+                        normal: getWorldHitNormal(hit) ?? new THREE.Vector3(0, 1, 0)
                     };
                     openAddModal();
                     return;
@@ -272,7 +284,7 @@ export function setupInteractions(): void {
         if (AppState.footModel) {
             const hits = raycaster.intersectObject(AppState.footModel, true);
             if (hits.length > 0) {
-                flyToPosition(hits[0].point, hits[0].face ? hits[0].face.normal : null, 600);
+                flyToPosition(hits[0].point, getWorldHitNormal(hits[0]), 600);
                 showToast('Drehpunkt auf markierte Stelle zentriert', 'info');
             } else {
                 resetCameraView();

@@ -25,7 +25,7 @@
 
 ## Funktionsübersicht
 
-- **Echtes 3D-Knochenmodell:** Laden des hochauflösenden anatomischen 38,7 MB GLTF-Modells (`bones_foot.glb`).
+- **Echtes 3D-Knochenmodell:** Laden des hochauflösenden anatomischen GLTF-Modells (indiziert, ca. 13,5 MB) (`bones_foot.glb`).
 - **PBR-Materialien & Texturskalierung:** Realistisches Rendering mit Albedo-, Normal-, Roughness- und Ambient-Occlusion-Maps sowie Tri-Planarer UV-Projektion.
 - **Punktbasierte Markierungen:** Einfaches Platzieren von nummerierten Markierungen inklusive Titel und Notizen per Mausklick auf die Knochenoberfläche.
 - **Intelligente Badges:**
@@ -197,17 +197,17 @@ Da medizinische Roh-Scans meist keine UV-Koordinaten besitzen, projiziert `gener
 
 Unter `public/textures/bone/` liegen 2048x2048 PBR-Texturen:
 
-- `bone_albedo.png` (Farb- und Knochenstruktur)
-- `bone_normal-ogl.png` (Mikrorelief und Poren)
-- `bone_roughness.png` (Lichtstreuung matter Knochenbereiche)
-- `bone_ao.png` (Tiefenschatten in Gelenkspalten)
+- `bone_albedo.jpg` (Farb- und Knochenstruktur)
+- `bone_normal-ogl.jpg` (Mikrorelief und Poren)
+- `bone_roughness.jpg` (Lichtstreuung matter Knochenbereiche)
+- `bone_ao.jpg` (Tiefenschatten in Gelenkspalten)
 
 ### PBR-Hautmaterial
 
 Unter `public/textures/skin/` liegen optimierte 2K PBR-Texturen:
 
 - `skin_0001_color_2k.jpg` (Farb- und Hauttöne)
-- `skin_0001_normal_directx_2k.png` (Mikro-Poren- und Hautfaltenrelief)
+- `skin_0001_normal_directx_2k.jpg` (Mikro-Poren- und Hautfaltenrelief, DirectX-Konvention → `normalScale.y` negativ)
 - `skin_0001_roughness_2k.jpg` (Lichtstreuung)
 - `skin_0001_ao_2k.jpg` (Tiefenverschattung)
 
